@@ -1,5 +1,6 @@
 #! /bin/sh
 
+MAKE=make
 API_SECRET=
 API_KEY=
 SERVER=
@@ -27,6 +28,15 @@ else
 	CONFIG="$CONFIG_LOCAL"
 fi
 echo "$0: using config: $CONFIG"
+
+# Read the API secret from the configuration.
+
+while read ln
+do
+	bsdmake="$(echo $ln | sed -n 's!^[ ]*bsdmake[ ]*=[ ]*!!p')"
+	[ -z "$bsdmake" ] && continue
+	MAKE="$bsdmake"
+done < "$CONFIG"
 
 # Read the API secret from the configuration.
 
@@ -172,24 +182,24 @@ do
 		echo "$0: ./configure PREFIX=build: $reponame" 1>&3
 		./configure PREFIX=build 1>&3 2>&3 || break
 
-		echo "$0: make: $reponame"
-		echo "$0: make: $reponame" 1>&3
-		make 1>&3 2>&3 || break
+		echo "$0: ${MAKE}: $reponame"
+		echo "$0: ${MAKE}: $reponame" 1>&3
+		${MAKE} 1>&3 2>&3 || break
 		TIME_build=`date +%s`
 
-		echo "$0: make regress: $reponame"
-		echo "$0: make regress: $reponame" 1>&3
-		make regress 1>&3 2>&3 || break
+		echo "$0: ${MAKE} regress: $reponame"
+		echo "$0: ${MAKE} regress: $reponame" 1>&3
+		${MAKE} regress 1>&3 2>&3 || break
 		TIME_test=`date +%s`
 
-		echo "$0: make install: $reponame"
-		echo "$0: make install: $reponame" 1>&3
-		make install 1>&3 2>&3 || break
+		echo "$0: ${MAKE} install: $reponame"
+		echo "$0: ${MAKE} install: $reponame" 1>&3
+		${MAKE} install 1>&3 2>&3 || break
 		TIME_install=`date +%s`
 
-		echo "$0: make distcheck: $reponame"
-		echo "$0: make distcheck: $reponame" 1>&3
-		make distcheck 1>&3 2>&3 || break
+		echo "$0: ${MAKE} distcheck: $reponame"
+		echo "$0: ${MAKE} distcheck: $reponame" 1>&3
+		${MAKE} distcheck 1>&3 2>&3 || break
 		TIME_distcheck=`date +%s`
 		break
 	done
