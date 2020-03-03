@@ -1,0 +1,38 @@
+struct project {
+	field name text unique;
+	field id int rowid;
+
+	search name: name byname;
+};
+
+struct user {
+	field email email;
+	field apikey int limit gt 0 unique;
+	field apisecret text limit eq 32;
+	field ctime epoch;
+	field id int rowid;
+
+	search apikey: name bykey;
+};
+
+struct report {
+	field projectid:project.id;
+	field userid:user.id;
+	field start epoch;
+	field env epoch;
+	field depend epoch;
+	field build epoch;
+	field test epoch;
+	field install epoch;
+	field distcheck epoch;
+	field ctime epoch;
+	field log text;
+	field unamem text limit le 128;
+	field unamen text limit le 128;
+	field unamer text limit le 128;
+	field unames text limit le 128;
+	field unamev text limit le 128;
+	field id int rowid;
+
+	insert;
+};
