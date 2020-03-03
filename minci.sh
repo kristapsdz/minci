@@ -225,9 +225,9 @@ do
 	QUERY="${QUERY}&report-install=${TIME_install}"
 	if [ $TIME_distcheck -eq 0 ]
 	then
-		QUERY="${QUERY}&report-log=`md5 -q /tmp/minci.log`"
+		QUERY="${QUERY}&report-log=`openssl dgst -md5 -hex /tmp/minci.log | sed 's!^[^=]*= !!'`"
 	else
-		QUERY="${QUERY}&report-log=`md5 -q /dev/null`"
+		QUERY="${QUERY}&report-log=`openssl dgst -md5 -hex /dev/null | sed 's!^[^=]*= !!'`"
 	fi
 	QUERY="${QUERY}&report-start=${TIME_start}"
 	QUERY="${QUERY}&report-test=${TIME_test}"
