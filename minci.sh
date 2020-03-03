@@ -195,6 +195,14 @@ do
 	done
 
 	exec 3>&-
+	set +e
+
+	if [ $TIME_distcheck -eq 0 ]
+	then
+		echo "$0: FAILURE: $reponame"
+	else
+		echo "$0: success: $reponame"
+	fi
 
 	echo "$0: computing signature"
 
@@ -203,8 +211,6 @@ do
 	UNAME_R=`uname -r | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
 	UNAME_S=`uname -s | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
 	UNAME_V=`uname -v | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
-
-	set +e
 
 	# Create the signature for this entry.
 	# It consists of all the MD5 hash of all arguments in
