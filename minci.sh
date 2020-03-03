@@ -196,6 +196,14 @@ do
 
 	exec 3>&-
 
+	echo "$0: computing signature"
+
+	UNAME_M=`uname -m | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
+	UNAME_N=`uname -n | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
+	UNAME_R=`uname -r | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
+	UNAME_S=`uname -s | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
+	UNAME_V=`uname -v | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
+
 	set +e
 
 	# Create the signature for this entry.
@@ -217,11 +225,11 @@ do
 	fi
 	QUERY="${QUERY}&report-start=${TIME_start}"
 	QUERY="${QUERY}&report-test=${TIME_test}"
-	QUERY="${QUERY}&report-unamem=`uname -m`"
-	QUERY="${QUERY}&report-unamen=`uname -n`"
-	QUERY="${QUERY}&report-unamer=`uname -r`"
-	QUERY="${QUERY}&report-unames=`uname -s`"
-	QUERY="${QUERY}&report-unamev=`uname -v`"
+	QUERY="${QUERY}&report-unamem=${UNAME_M}"
+	QUERY="${QUERY}&report-unamen=${UNAME_N}"
+	QUERY="${QUERY}&report-unamer=${UNAME_R}"
+	QUERY="${QUERY}&report-unames=${UNAME_S}"
+	QUERY="${QUERY}&report-unamev=${UNAME_V}"
 	QUERY="${QUERY}&user-apisecret=${API_SECRET}"
 
 	SIGNATURE=`/bin/echo -n "$QUERY" | openssl dgst -md5 -hex | sed 's!^[^=]*= !!'`
@@ -229,6 +237,8 @@ do
 	# Now actually send the report.
 	# It includes the signature and optionally the build log (only
 	# if we didn't get to the end).
+
+	echo "$0: sending report: $SERVER"
 
 	REPORT_LOG=
 	if [ $TIME_distcheck -eq 0 ]
@@ -246,11 +256,11 @@ do
 	     -F "report-test=${TIME_test}" \
 	     -F "report-install=${TIME_install}" \
 	     -F "report-distcheck=${TIME_distcheck}" \
-	     -F "report-unamem=`uname -m`" \
-	     -F "report-unamen=`uname -n`" \
-	     -F "report-unamer=`uname -r`" \
-	     -F "report-unames=`uname -s`" \
-	     -F "report-unamev=`uname -v`" \
+	     -F "report-unamem=${UNAME_M}" \
+	     -F "report-unamen=${UNAME_N}" \
+	     -F "report-unamer=${UNAME_R}" \
+	     -F "report-unames=${UNAME_S}" \
+	     -F "report-unamev=${UNAME_V}" \
 	     -F "user-apikey=${API_KEY}" \
 	     -F "signature=${SIGNATURE}" \
 	     "${SERVER}"
