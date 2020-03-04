@@ -16,6 +16,7 @@
  */
 #include <sys/types.h>
 
+#include <err.h>
 #include <inttypes.h>
 #include <md5.h>
 #include <stdarg.h>
@@ -26,20 +27,21 @@
 #include <unistd.h>
 
 #include <kcgi.h>
+#include <kcgihtml.h>
 
 #include "extern.h"
 
 enum	page {
-	PAGE_SUBMIT,
+	PAGE_INDEX,
 	PAGE__MAX
 };
 
 static const char *const pages[PAGE__MAX] = {
-	"submit", /* PAGE_SUBMIT */
+	"index", /* PAGE_INDEX */
 };
 
 static void
-http_open(struct kreq *r, enum khttp code)
+http_open(struct kreq *r, enum khttp code, enum kmime mime)
 {
 
 	khttp_head(r, kresps[KRESP_STATUS], 
@@ -50,13 +52,148 @@ http_open(struct kreq *r, enum khttp code)
 		"%s", "no-cache");
 	khttp_head(r, kresps[KRESP_EXPIRES], 
 		"%s", "0");
-	khttp_head(r, kresps[KRESP_CONTENT_TYPE], 
-		"%s", kmimetypes[KMIME_APP_JSON]);
+	if (mime != KMIME__MAX)
+		khttp_head(r, kresps[KRESP_CONTENT_TYPE], 
+			"%s", kmimetypes[mime]);
 	khttp_body(r);
 }
 
 static void
-send_submit(struct kreq *r)
+get_print_time(struct khtmlreq *req, int64_t start, int64_t given)
+{
+
+	if (given == 0) {
+		khtml_attrx(req, KELEM_TD, KATTR_CLASS,
+			KATTRX_STRING, "fail", KATTR__MAX);
+		khtml_closeelem(req, 1);
+		return;
+	} 
+
+	khtml_attrx(req, KELEM_TD, KATTR_CLASS,
+		KATTRX_STRING, "success", KATTR__MAX);
+	khtml_attrx(req, KELEM_TIME,
+		KATTR_DATETIME, KATTRX_INT, given, KATTR__MAX);
+	khtml_int(req, given - start);
+	khtml_closeelem(req, 1);
+	khtml_closeelem(req, 1);
+}
+
+static void
+get_print_report_header(struct khtmlreq *req)
+{
+
+	khtml_elem(req, KELEM_TR);
+	khtml_elem(req, KELEM_TH);
+	khtml_puts(req, "project");
+	khtml_closeelem(req, 1);
+	khtml_elem(req, KELEM_TH);
+	khtml_puts(req, "system");
+	khtml_closeelem(req, 1);
+	khtml_elem(req, KELEM_TH);
+	khtml_puts(req, "date");
+	khtml_closeelem(req, 1);
+	khtml_elem(req, KELEM_TH);
+	khtml_puts(req, "precheck");
+	khtml_closeelem(req, 1);
+	khtml_elem(req, KELEM_TH);
+	khtml_puts(req, "depends");
+	khtml_closeelem(req, 1);
+	khtml_elem(req, KELEM_TH);
+	khtml_puts(req, "build");
+	khtml_closeelem(req, 1);
+	khtml_elem(req, KELEM_TH);
+	khtml_puts(req, "regress");
+	khtml_closeelem(req, 1);
+	khtml_elem(req, KELEM_TH);
+	khtml_puts(req, "install");
+	khtml_closeelem(req, 1);
+	khtml_elem(req, KELEM_TH);
+	khtml_puts(req, "distcheck");
+	khtml_closeelem(req, 1);
+	khtml_closeelem(req, 1);
+}
+
+static void
+get_print_report(const struct report *p, void *arg)
+{
+	struct khtmlreq	*req = arg;
+	struct tm	 tm;
+
+	memset(&tm, 0, sizeof(struct tm));
+	KUTIL_EPOCH2TM(p->start, &tm);
+
+	khtml_elem(req, KELEM_TR);
+
+	khtml_elem(req, KELEM_TD);
+	khtml_puts(req, p->project.name);
+	khtml_closeelem(req, 1);
+
+	khtml_elem(req, KELEM_TD);
+	khtml_attrx(req, KELEM_TIME,
+		KATTR_DATETIME, KATTRX_INT, p->start, KATTR__MAX);
+	khtml_int(req, tm.tm_year + 1900);
+	khtml_puts(req, "-");
+	khtml_int(req, tm.tm_mon + 1);
+	khtml_puts(req, "-");
+	khtml_int(req, tm.tm_mday);
+	khtml_closeelem(req, 1);
+	khtml_closeelem(req, 1);
+
+	khtml_elem(req, KELEM_TD);
+	khtml_puts(req, p->unames);
+	khtml_puts(req, " ");
+	khtml_puts(req, p->unamer);
+	khtml_closeelem(req, 1);
+
+	get_print_time(req, p->start, p->env);
+	get_print_time(req, p->env, p->depend);
+	get_print_time(req, p->depend, p->build);
+	get_print_time(req, p->build, p->test);
+	get_print_time(req, p->test, p->install);
+	get_print_time(req, p->install, p->distcheck);
+	khtml_closeelem(req, 1);
+}
+
+static void
+get_html(struct kreq *r)
+{
+	struct khtmlreq	 req;
+
+	http_open(r, KHTTP_200, r->mime);
+
+	khtml_open(&req, r, 0);
+	khtml_elem(&req, KELEM_HTML);
+	khtml_elem(&req, KELEM_HEAD);
+	khtml_elem(&req, KELEM_STYLE);
+	khtml_puts(&req, "td.success { background-color: rgba(0, 255, 0, 0.2); }");
+	khtml_puts(&req, "td.fail { background-color: rgba(255, 0, 0, 0.5); }");
+	khtml_puts(&req, "th, td { padding: 0.5rem 1rem; }");
+	khtml_puts(&req, "table { border-spacing: unset; }");
+	khtml_closeelem(&req, 1);
+	khtml_closeelem(&req, 1);
+	khtml_elem(&req, KELEM_BODY);
+	khtml_elem(&req, KELEM_TABLE);
+	khtml_elem(&req, KELEM_THEAD);
+	get_print_report_header(&req);
+	khtml_closeelem(&req, 1);
+	khtml_elem(&req, KELEM_TBODY);
+	db_report_iterate_last(r->arg, get_print_report, &req);
+	khtml_closeelem(&req, 1);
+	khtml_closeelem(&req, 1);
+	khtml_closeelem(&req, 1);
+	khtml_closeelem(&req, 1);
+	khtml_close(&req);
+}
+
+static void
+get(struct kreq *r)
+{
+
+	return get_html(r);
+}
+
+static void
+post(struct kreq *r)
 {
 	struct project	*proj = NULL;
 	struct user	*user = NULL;
@@ -99,9 +236,54 @@ send_submit(struct kreq *r)
 	    (kpuv = r->fieldmap[VALID_REPORT_UNAMEV]) == NULL ||
 	    (kpu = r->fieldmap[VALID_USER_APIKEY]) == NULL) {
 		kutil_warnx(r, NULL, "invalid request");
-		http_open(r, KHTTP_403);
+		http_open(r, KHTTP_403, KMIME__MAX);
 		return;
 	}
+
+	/* 
+	 * If stages fail, subsequent must also fail. 
+	 * Also, the log should only be specified on failure.
+	 */
+
+	if ((kpe->parsed.i == 0 &&
+	     (kpd->parsed.i != 0 ||
+	      kpb->parsed.i != 0 ||
+	      kpt->parsed.i != 0 ||
+	      kpi->parsed.i != 0 ||
+	      kpc->parsed.i != 0)) ||
+	    (kpd->parsed.i == 0 &&
+	     (kpb->parsed.i != 0 ||
+	      kpt->parsed.i != 0 ||
+	      kpi->parsed.i != 0 ||
+	      kpc->parsed.i != 0)) ||
+	    (kpb->parsed.i == 0 &&
+	     (kpt->parsed.i != 0 ||
+	      kpi->parsed.i != 0 ||
+	      kpc->parsed.i != 0)) ||
+	    (kpt->parsed.i == 0 &&
+	     (kpi->parsed.i != 0 ||
+	      kpc->parsed.i != 0)) ||
+	    (kpi->parsed.i == 0 &&
+	     (kpc->parsed.i != 0)) ||
+	    (kpc->parsed.i != 0 && kpl->valsz)) {
+		kutil_warnx(r, NULL, "invalid stages");
+		http_open(r, KHTTP_403, KMIME__MAX);
+		return;
+	}
+
+	/* Time must increase. */
+
+	if ((kpe->parsed.i != 0 && kpe->parsed.i < kps->parsed.i) ||
+	    (kpd->parsed.i != 0 && kpd->parsed.i < kpe->parsed.i) ||
+	    (kpb->parsed.i != 0 && kpb->parsed.i < kpd->parsed.i) ||
+	    (kpt->parsed.i != 0 && kpt->parsed.i < kpb->parsed.i) ||
+	    (kpi->parsed.i != 0 && kpi->parsed.i < kpt->parsed.i) ||
+	    (kpc->parsed.i != 0 && kpc->parsed.i < kpi->parsed.i)) {
+		kutil_warnx(r, NULL, "invalid timestamp sequence");
+		http_open(r, KHTTP_403, KMIME__MAX);
+	}
+
+	/* Hash log digest (may be zero-length). */
 
 	MD5Init(&ctx);
 	MD5Update(&ctx, kpl->parsed.s, kpl->valsz);
@@ -113,7 +295,7 @@ send_submit(struct kreq *r)
 		kpn->parsed.s); /* name */
 	if (proj == NULL) {
 		kutil_warnx(r, NULL, "invalid project");
-		http_open(r, KHTTP_403);
+		http_open(r, KHTTP_403, KMIME__MAX);
 		goto out;
 	}
 
@@ -123,7 +305,7 @@ send_submit(struct kreq *r)
 		kpu->parsed.i); /* apikey */
 	if (user == NULL) {
 		kutil_warnx(r, NULL, "invalid user");
-		http_open(r, KHTTP_403);
+		http_open(r, KHTTP_403, KMIME__MAX);
 		goto out;
 	}
 
@@ -169,7 +351,7 @@ send_submit(struct kreq *r)
 
 	if (strcasecmp(digest, sig->parsed.s)) {
 		kutil_warnx(r, NULL, "bad signature");
-		http_open(r, KHTTP_403);
+		http_open(r, KHTTP_403, KMIME__MAX);
 		goto out;
 	}
 
@@ -194,7 +376,7 @@ send_submit(struct kreq *r)
 		kpuv->parsed.s); /* unamev */
 
 	kutil_info(r, user->email, "log submitted: %s", proj->name);
-	http_open(r, KHTTP_201);
+	http_open(r, KHTTP_201, KMIME__MAX);
 out:
 	db_project_free(proj);
 	db_user_free(user);
@@ -207,20 +389,23 @@ main(void)
 	struct kreq	 r;
 	enum kcgi_err	 er;
 
+	/* Basic checks: parse and valid page. */
+
 	er = khttp_parse(&r, valid_keys,
-		VALID__MAX, pages, PAGE__MAX, PAGE_SUBMIT);
+		VALID__MAX, pages, PAGE__MAX, PAGE_INDEX);
 
 	if (er != KCGI_OK)
 		kutil_errx(&r, NULL, 
 			"khttp_parse: %s", kcgi_strerror(er));
 
 	if (r.page == PAGE__MAX) {
-		http_open(&r, KHTTP_404);
+		http_open(&r, KHTTP_404, KMIME__MAX);
 		khttp_free(&r);
 		return EXIT_SUCCESS;
 	}
 
-	if ((r.arg = db_open(DATADIR "/minci.db")) == NULL) {
+	if ((r.arg = db_open_logging
+	    (DATADIR "/minci.db", NULL, warnx, NULL)) == NULL) {
 		kutil_errx(&r, NULL, "db_open: %s", 
 			DATADIR "/minci.db");
 		khttp_free(&r);
@@ -234,12 +419,12 @@ main(void)
 		return EXIT_FAILURE;
 	}
 
-	switch (r.page) {
-	case PAGE_SUBMIT:
-		send_submit(&r);
-		break;
-	default:
-		abort();
+	if (r.method == KMETHOD_POST) {
+		db_role(r.arg, ROLE_producer);
+		post(&r);
+	} else {
+		db_role(r.arg, ROLE_consumer);
+		get(&r);
 	}
 
 	db_close(r.arg);

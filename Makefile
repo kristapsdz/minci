@@ -8,7 +8,7 @@ CPPFLAGS	+= -I/usr/local/include
 CFLAGS	  	+= -g -W -Wall -Wextra -Wmissing-prototypes
 CFLAGS	  	+= -Wstrict-prototypes -Wwrite-strings -Wno-unused-parameter
 CFLAGS		+= -DDATADIR=\"$(DATADIR)\"
-CFLAGS		+= `pkg-config --cflags kcgi sqlbox`
+CFLAGS		+= `pkg-config --cflags kcgi-html sqlbox`
 
 all: minci.cgi
 
@@ -23,7 +23,7 @@ update: all
 	install -o www -m 0500 minci.cgi $(PREFIX)/cgi-bin
 
 minci.cgi: $(OBJS) minci.db
-	$(CC) -o $@ -static $(OBJS) `pkg-config --libs --static kcgi sqlbox`
+	$(CC) -o $@ -static $(OBJS) `pkg-config --libs --static kcgi-html sqlbox`
 
 clean:
 	rm -f $(OBJS) minci.cgi db.c extern.h minci.db db.sql

@@ -1,8 +1,17 @@
+roles {
+	role producer;
+	role consumer;
+};
+
 struct project {
 	field name text unique;
 	field id int rowid;
 
 	search name: name byname;
+
+	roles producer {
+		search byname;
+	};
 };
 
 struct user {
@@ -13,9 +22,15 @@ struct user {
 	field id int rowid;
 
 	search apikey: name bykey;
+
+	roles producer {
+		search bykey;
+	};
 };
 
 struct report {
+	field project struct projectid;
+
 	field projectid:project.id;
 	field userid:user.id;
 	field start epoch;
@@ -35,4 +50,15 @@ struct report {
 	field id int rowid;
 
 	insert;
+
+	iterate: limit 50 name last order ctime desc;
+
+	roles consumer {
+		iterate last;
+		noexport userid;
+	};
+
+	roles producer {
+		insert;
+	};
 };
