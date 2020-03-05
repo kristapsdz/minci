@@ -64,12 +64,35 @@ http_open(struct kreq *r, enum khttp code, enum kmime mime)
 	khttp_body(r);
 }
 
+static void
+html_open(struct khtmlreq *req, const char *title)
+{
+
+	khtml_elem(req, KELEM_DOCTYPE);
+	khtml_elem(req, KELEM_HTML);
+	khtml_elem(req, KELEM_HEAD);
+	khtml_elem(req, KELEM_TITLE);
+	khtml_puts(req, "BSD.lv: ");
+	khtml_puts(req, title);
+	khtml_closeelem(req, 1); /* title */
+	khtml_attr(req, KELEM_META, 
+		KATTR_NAME, "viewport",
+		KATTR_CONTENT, "width=device-width, initial-scale=1",
+		KATTR__MAX);
+	khtml_attrx(req, KELEM_LINK, 
+		KATTR_REL, KATTRX_STRING, "stylesheet",
+		KATTR_HREF, KATTRX_STRING, "/minci.css",
+		KATTR__MAX);
+	khtml_closeelem(req, 1); /* head */
+	khtml_elem(req, KELEM_BODY);
+}
+
 /*
  * Print a block with a time offset of "start" to "given".
  * If "given" is zero, suppress any content printing.
  */
 static void
-gen_html_offs(struct khtmlreq *req,
+get_html_offs(struct khtmlreq *req,
 	const char *classes, int64_t start, int64_t given)
 {
 
@@ -94,7 +117,7 @@ gen_html_offs(struct khtmlreq *req,
  * Print the first row of a report table.
  */
 static void
-gen_html_last_header(struct khtmlreq *req)
+get_html_last_header(struct khtmlreq *req)
 {
 
 	khtml_attr(req, KELEM_DIV, 
@@ -201,17 +224,17 @@ get_html_last_report(const struct report *p, void *arg)
 
 	khtml_attr(&r->html, KELEM_DIV,
 		KATTR_CLASS, "cellgroup", KATTR__MAX);
-	gen_html_offs(&r->html, "cell "
+	get_html_offs(&r->html, "cell "
 		"report-env", p->start, p->env);
-	gen_html_offs(&r->html, "cell "
+	get_html_offs(&r->html, "cell "
 		"report-deps", p->env, p->depend);
-	gen_html_offs(&r->html, "cell "
+	get_html_offs(&r->html, "cell "
 		"report-build", p->depend, p->build);
-	gen_html_offs(&r->html, "cell "
+	get_html_offs(&r->html, "cell "
 		"report-regress", p->build, p->test);
-	gen_html_offs(&r->html, "cell "
+	get_html_offs(&r->html, "cell "
 		"report-install", p->test, p->install);
-	gen_html_offs(&r->html, "cell "
+	get_html_offs(&r->html, "cell "
 		"report-dist", p->install, p->distcheck);
 	khtml_closeelem(&r->html, 1); /* cellgroup */
 
@@ -220,45 +243,29 @@ get_html_last_report(const struct report *p, void *arg)
 }
 
 /*
- * List a single record as text/html.
- * Outputs HTTP 404 (error) or 200 (success).
+ * Output only the log (which may be zero-length).
  */
 static void
-get_html_single(struct kreq *r)
+get_single_text(struct kreq *r, const struct report *p)
+{
+
+	khttp_puts(r, p->log);
+}
+
+/*
+ * List a single record as text/html.
+ */
+static void
+get_single_html(struct kreq *r, const struct report *p)
 {
 	struct khtmlreq	 req;
-	struct report	*p;
-	struct kpair	*kp;
 	char		 buf[64];
-
-	kp = r->fieldmap[VALID_REPORT_ID];
-	assert(kp != NULL);
-	p = db_report_get_byid(r->arg, 
-		kp->parsed.i); /* id */
-	if (p == NULL) {
-		http_open(r, KHTTP_404, KMIME__MAX);
-		return;
-	}
-
-	http_open(r, KHTTP_200, r->mime);
+	char		*url;
+	const char	*cp;
+	size_t		 count;
 
 	khtml_open(&req, r, 0);
-	khtml_elem(&req, KELEM_DOCTYPE);
-	khtml_elem(&req, KELEM_HTML);
-	khtml_elem(&req, KELEM_HEAD);
-	khtml_elem(&req, KELEM_TITLE);
-	khtml_puts(&req, "BSD.lv: Minimal CI Report");
-	khtml_closeelem(&req, 1); /* title */
-	khtml_attr(&req, KELEM_META,
-		KATTR_NAME, "viewport",
-		KATTR_CONTENT, "width=device-width, initial-scale=1",
-		KATTR__MAX);
-	khtml_attrx(&req, KELEM_LINK, 
-		KATTR_REL, KATTRX_STRING, "stylesheet",
-		KATTR_HREF, KATTRX_STRING, "/minci.css",
-		KATTR__MAX);
-	khtml_closeelem(&req, 1); /* head */
-	khtml_elem(&req, KELEM_BODY);
+	html_open(&req, "Minimal CI Report");
 
 	khtml_attr(&req, KELEM_DIV,
 		KATTR_CLASS, "singleton", KATTR__MAX);
@@ -303,31 +310,95 @@ get_html_single(struct kreq *r)
 
 	khtml_attr(&req, KELEM_DIV,
 		KATTR_CLASS, "leftgroup", KATTR__MAX);
-	gen_html_offs(&req, "lefthead "
+	get_html_offs(&req, "lefthead "
 		"report-env", p->start, p->env);
-	gen_html_offs(&req, "lefthead "
+	get_html_offs(&req, "lefthead "
 		"report-deps", p->env, p->depend);
-	gen_html_offs(&req, "lefthead "
+	get_html_offs(&req, "lefthead "
 		"report-build", p->depend, p->build);
-	gen_html_offs(&req, "lefthead "
+	get_html_offs(&req, "lefthead "
 		"report-regress", p->build, p->test);
-	gen_html_offs(&req, "lefthead "
+	get_html_offs(&req, "lefthead "
 		"report-install", p->test, p->install);
-	gen_html_offs(&req, "lefthead "
+	get_html_offs(&req, "lefthead "
 		"report-dist", p->install, p->distcheck);
 	khtml_closeelem(&req, 1); /* div */
 
+	if (p->distcheck == 0)
+		khtml_attr(&req, KELEM_DIV, KATTR_CLASS,
+			"report-failure", KATTR__MAX);
+	else
+		khtml_attr(&req, KELEM_DIV, KATTR_CLASS,
+			"report-success", KATTR__MAX);
+	khtml_closeelem(&req, 1); /* div */
+
+	/* Emit the log tail only if it's non-empty. */
+
 	if (p->log[0] != '\0') {
 		khtml_attr(&req, KELEM_DIV, KATTR_CLASS,
-			"lefthead report-log", KATTR__MAX);
-		khtml_puts(&req, p->log);
+			"report-log-box", KATTR__MAX);
+		khtml_attr(&req, KELEM_DIV, KATTR_CLASS,
+			"report-log", KATTR__MAX);
+		count = 0;
+		cp = p->log + strlen(p->log);
+		while (cp > p->log) {
+			if (*cp == '\n' && count++ == 16) {
+				cp++;
+				break;
+			}
+			cp--;
+		}
+		khtml_puts(&req, cp);
 		khtml_closeelem(&req, 1); /* div */
+		url = kutil_urlpartx(NULL,
+			r->pname, 
+			ksuffixes[KMIME_TEXT_PLAIN],
+			pages[PAGE_INDEX],
+			valid_keys[VALID_REPORT_ID].name,
+			KATTRX_INT, p->id, NULL);
+		khtml_attr(&req, KELEM_A, 
+			KATTR_CLASS, "report-log-link", 
+			KATTR_HREF, url, KATTR__MAX);
+		khtml_closeelem(&req, 1); /* a */
+		khtml_closeelem(&req, 1); /* div */
+		free(url);
 	}
 
 	khtml_closeelem(&req, 1); /* div */
 	khtml_closeelem(&req, 1); /* body */
 	khtml_closeelem(&req, 1); /* html */
 	khtml_close(&req);
+}
+
+/*
+ * Routes a record to its MIME type output.
+ * Outputs HTTP 404 (error) or 200 (success).
+ */
+static void
+get_single(struct kreq *r)
+{
+	struct report	*p;
+	struct kpair	*kp;
+
+	kp = r->fieldmap[VALID_REPORT_ID];
+	assert(kp != NULL);
+
+	p = db_report_get_byid(r->arg, 
+		kp->parsed.i); /* id */
+
+	if (p == NULL) {
+		http_open(r, KHTTP_404, KMIME__MAX);
+		return;
+	}
+
+	/* Emit either our log or the full HTML record. */
+
+	http_open(r, KHTTP_200, r->mime);
+	if (r->mime == KMIME_TEXT_PLAIN)
+		get_single_text(r, p);
+	else
+		get_single_html(r, p);
+
 	db_report_free(p);
 }
 
@@ -336,33 +407,18 @@ get_html_single(struct kreq *r)
  * Always outputs HTTP 200.
  */
 static void
-gen_html_last(struct kreq *r)
+get_last(struct kreq *r)
 {
 	struct req	 req;
 
 	req.r = r;
 	http_open(r, KHTTP_200, r->mime);
-	khtml_open(&req.html, r, 0);
 
-	khtml_elem(&req.html, KELEM_DOCTYPE);
-	khtml_elem(&req.html, KELEM_HTML);
-	khtml_elem(&req.html, KELEM_HEAD);
-	khtml_elem(&req.html, KELEM_TITLE);
-	khtml_puts(&req.html, "BSD.lv: Recent Minimal CI Reports");
-	khtml_closeelem(&req.html, 1); /* title */
-	khtml_attr(&req.html, KELEM_META, 
-		KATTR_NAME, "viewport",
-		KATTR_CONTENT, "width=device-width, initial-scale=1",
-		KATTR__MAX);
-	khtml_attrx(&req.html, KELEM_LINK, 
-		KATTR_REL, KATTRX_STRING, "stylesheet",
-		KATTR_HREF, KATTRX_STRING, "/minci.css",
-		KATTR__MAX);
-	khtml_closeelem(&req.html, 1); /* head */
-	khtml_elem(&req.html, KELEM_BODY);
+	khtml_open(&req.html, r, 0);
+	html_open(&req.html, "Recent Minimal CI Reports");
 	khtml_attr(&req.html, KELEM_DIV, 
 		KATTR_CLASS, "table", KATTR__MAX);
-	gen_html_last_header(&req.html);
+	get_html_last_header(&req.html);
 	db_report_iterate_last(r->arg, 
 		get_html_last_report, &req);
 	khtml_closeelem(&req.html, 1); /* table */
@@ -379,9 +435,9 @@ get(struct kreq *r)
 {
 
 	if (r->fieldmap[VALID_REPORT_ID] != NULL)
-		get_html_single(r);
+		get_single(r);
 	else
-		gen_html_last(r);
+		get_last(r);
 }
 
 /*

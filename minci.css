@@ -49,6 +49,9 @@ body					{ font-family: sans-serif; }
 .report-log				{ white-space: pre;
 					  overflow: hidden;
 					  font-family: monospace;
+					  padding: 0.5rem;
+					  background-color: #f4f4f4;
+					  margin: 0.5rem 0;
 					  font-size: 8pt;
 					  text-overflow: ellipsis; }
 .lefthead.report-env::before		{ content: 'Env: '; }
@@ -57,15 +60,21 @@ body					{ font-family: sans-serif; }
 .lefthead.report-regress::before	{ content: 'Test: '; }
 .lefthead.report-install::before	{ content: 'Install: '; }
 .lefthead.report-dist::before		{ content: 'Check: '; }
+.leftgroup				{ margin: 1rem 0; }
 .leftgroup .lefthead::before		{ opacity: 0.5;
 					  width: 5rem;
 					  text-align: right;
 					  display: inline-block;
 					  padding-right: 0.25rem; }
-.lefthead.report-log::before		{ content: 'Fail log...';
-					  opacity: 0.5;
-					  color: red;
-					  display: block; }
+.report-failure::before			{ content: 'Report failure.';
+					  color: red; }
+.report-success::before			{ content: 'Report success.';
+					  color: green; }
+.report-failure, .report-success	{ margin: 1rem 0; }
+.report-log-box::before			{ content: 'Tail of failure log...';
+					  display: block;
+					  opacity: 0.5; }
+.report-log-link::before		{ content: 'Full log.'; }
 
 @media (min-width: 80rem) {
   html, body				{ margin: 1rem 0; }
