@@ -1,11 +1,13 @@
 #! /bin/sh
 
-MAKE=make
+# Usage:
+# minci.sh [repo...]
+# Use ~/.minci or /etc/minci for configuration, whichever comes first.
+
+MAKE="make"
 API_SECRET=
 API_KEY=
 SERVER=
-TESTS_GLOBAL="/usr/local/share/minci/deps"
-TESTS_LOCAL="$HOME/.local/share/minci/deps"
 STAGING="$HOME/.local/cache/minci"
 CONFIG=
 CONFIG_LOCAL="$HOME/.minci"
@@ -109,6 +111,25 @@ do
 	then
 		echo "$0: malformed repo: $repo" 1>&2
 		exit 1
+	fi
+
+	# See if we should run this.
+
+	if [ $# -gt 0 ]
+	then
+		for prog in $@
+		do
+			if [ "$prog" = "$reponame" ]
+			then
+				prog=""
+				break
+			fi
+		done
+		if [ -n "$prog" ]
+		then
+			echo "$0: ignoring: $reponame"
+			continue
+		fi
 	fi
 
 	# Now errors without || are fatal.
@@ -248,7 +269,7 @@ do
 	QUERY="${QUERY}&report-unamev=${UNAME_V}"
 	QUERY="${QUERY}&user-apisecret=${API_SECRET}"
 
-	SIGNATURE=`/bin/echo -n "$QUERY" | openssl dgst -md5 -hex | sed 's!^[^=]*= !!'`
+	SIGNATURE=`printf "%s" "$QUERY" | openssl dgst -md5 -hex | sed 's!^[^=]*= !!'`
 
 	# Now actually send the report.
 	# It includes the signature and optionally the build log (only
