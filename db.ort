@@ -53,9 +53,12 @@ struct report {
 
 	iterate: limit 50 name last order ctime desc;
 
+	search id: name byid;
+
 	roles consumer {
 		iterate last;
 		noexport userid;
+		search byid;
 	};
 
 	roles producer {

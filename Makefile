@@ -12,14 +12,14 @@ CFLAGS		+= `pkg-config --cflags kcgi-html sqlbox`
 
 all: minci.cgi
 
-install: all
-	mkdir -p $(PREFIX)/cgi-bin
+install: update
 	mkdir -p $(PREFIX)/data
-	install -o www -m 0500 minci.cgi $(PREFIX)/cgi-bin
 	install -o www -m 0600 minci.db $(PREFIX)/data
 
 update: all
 	mkdir -p $(PREFIX)/cgi-bin
+	mkdir -p $(PREFIX)/htdocs
+	install -o www -m 0444 minci.css $(PREFIX)/htdocs
 	install -o www -m 0500 minci.cgi $(PREFIX)/cgi-bin
 
 minci.cgi: $(OBJS) minci.db

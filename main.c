@@ -16,6 +16,7 @@
  */
 #include <sys/types.h>
 
+#include <assert.h>
 #include <err.h>
 #include <inttypes.h>
 #include <md5.h>
@@ -34,6 +35,11 @@
 enum	page {
 	PAGE_INDEX,
 	PAGE__MAX
+};
+
+struct	req {
+	struct kreq	*r;
+	struct khtmlreq	 html;
 };
 
 static const char *const pages[PAGE__MAX] = {
@@ -58,140 +64,260 @@ http_open(struct kreq *r, enum khttp code, enum kmime mime)
 	khttp_body(r);
 }
 
+/*
+ * Print a block with a time offset of "start" to "given".
+ * If "given" is zero, suppress any content printing.
+ */
 static void
-get_print_time(struct khtmlreq *req, int64_t start, int64_t given)
+gen_html_offs(struct khtmlreq *req,
+	const char *classes, int64_t start, int64_t given)
 {
 
-	if (given == 0) {
-		khtml_attrx(req, KELEM_TD, KATTR_CLASS,
-			KATTRX_STRING, "fail", KATTR__MAX);
-		khtml_closeelem(req, 1);
-		return;
-	} 
-
-	khtml_attrx(req, KELEM_TD, KATTR_CLASS,
-		KATTRX_STRING, "success", KATTR__MAX);
-	khtml_attrx(req, KELEM_TIME,
-		KATTR_DATETIME, KATTRX_INT, given, KATTR__MAX);
-	khtml_int(req, given - start);
-	khtml_closeelem(req, 1);
-	khtml_closeelem(req, 1);
+	khtml_attr(req, KELEM_DIV,
+		KATTR_CLASS, classes, KATTR__MAX);
+	if (given != 0) {
+		khtml_attrx(req, KELEM_TIME, KATTR_DATETIME,
+			KATTRX_INT, given, KATTR__MAX);
+		khtml_int(req, given - start);
+		khtml_closeelem(req, 1); /* time */
+	}
+	khtml_closeelem(req, 1); /* div */
 }
 
+/*
+ * Print the first row of a report table.
+ */
 static void
-get_print_report_header(struct khtmlreq *req)
+gen_html_last_header(struct khtmlreq *req)
 {
 
-	khtml_elem(req, KELEM_TR);
-	khtml_elem(req, KELEM_TH);
-	khtml_puts(req, "project");
-	khtml_closeelem(req, 1);
-	khtml_elem(req, KELEM_TH);
-	khtml_puts(req, "system");
-	khtml_closeelem(req, 1);
-	khtml_elem(req, KELEM_TH);
-	khtml_puts(req, "date");
-	khtml_closeelem(req, 1);
-	khtml_elem(req, KELEM_TH);
-	khtml_puts(req, "precheck");
-	khtml_closeelem(req, 1);
-	khtml_elem(req, KELEM_TH);
-	khtml_puts(req, "depends");
-	khtml_closeelem(req, 1);
-	khtml_elem(req, KELEM_TH);
-	khtml_puts(req, "build");
-	khtml_closeelem(req, 1);
-	khtml_elem(req, KELEM_TH);
-	khtml_puts(req, "regress");
-	khtml_closeelem(req, 1);
-	khtml_elem(req, KELEM_TH);
-	khtml_puts(req, "install");
-	khtml_closeelem(req, 1);
-	khtml_elem(req, KELEM_TH);
-	khtml_puts(req, "distcheck");
-	khtml_closeelem(req, 1);
-	khtml_closeelem(req, 1);
+	khtml_attr(req, KELEM_DIV, 
+		KATTR_CLASS, "row", KATTR__MAX);
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"header report-id", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"header project-name", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"header report-start", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"header report-system", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"header report-env", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"header report-deps", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"header report-build", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"header report-regress", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"header report-install", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"header report-dist", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_closeelem(req, 1); /* row */
 }
 
+/*
+ * Print a record as it would appear in an HTML table.
+ */
 static void
-get_print_report(const struct report *p, void *arg)
+get_html_last_report(const struct report *p, void *arg)
 {
-	struct khtmlreq	*req = arg;
+	struct req	*r = arg;
 	struct tm	 tm;
+	char		*url;
 
+	url = kutil_urlpartx(NULL,
+		r->r->pname, 
+		ksuffixes[KMIME_TEXT_HTML],
+		pages[PAGE_INDEX],
+		valid_keys[VALID_REPORT_ID].name,
+		KATTRX_INT, p->id, NULL);
 	memset(&tm, 0, sizeof(struct tm));
 	KUTIL_EPOCH2TM(p->start, &tm);
 
-	khtml_elem(req, KELEM_TR);
+	khtml_attr(&r->html, KELEM_DIV,
+		KATTR_CLASS, "row", KATTR__MAX);
 
-	khtml_elem(req, KELEM_TD);
-	khtml_puts(req, p->project.name);
-	khtml_closeelem(req, 1);
+	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
+		"cell report-id", KATTR__MAX);
+	khtml_attr(&r->html, KELEM_A,
+		KATTR_HREF, url, KATTR__MAX);
+	khtml_int(&r->html, p->id);
+	khtml_closeelem(&r->html, 1); /* link */
+	khtml_closeelem(&r->html, 1); /* cell */
 
-	khtml_elem(req, KELEM_TD);
-	khtml_attrx(req, KELEM_TIME,
+	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
+		"cell project-name", KATTR__MAX);
+	khtml_puts(&r->html, p->project.name);
+	khtml_closeelem(&r->html, 1); /* cell */
+
+	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
+		"cell report-start", KATTR__MAX);
+	khtml_attrx(&r->html, KELEM_TIME,
 		KATTR_DATETIME, KATTRX_INT, p->start, KATTR__MAX);
-	khtml_int(req, tm.tm_year + 1900);
-	khtml_puts(req, "-");
-	khtml_int(req, tm.tm_mon + 1);
-	khtml_puts(req, "-");
-	khtml_int(req, tm.tm_mday);
-	khtml_closeelem(req, 1);
-	khtml_closeelem(req, 1);
+	khtml_int(&r->html, tm.tm_year + 1900);
+	khtml_puts(&r->html, "-");
+	khtml_int(&r->html, tm.tm_mon + 1);
+	khtml_puts(&r->html, "-");
+	khtml_int(&r->html, tm.tm_mday);
+	khtml_closeelem(&r->html, 1); /* time */
+	khtml_closeelem(&r->html, 1); /* cell */
 
-	khtml_elem(req, KELEM_TD);
-	khtml_puts(req, p->unames);
-	khtml_puts(req, " ");
-	khtml_puts(req, p->unamer);
-	khtml_closeelem(req, 1);
+	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
+		"cell report-system", KATTR__MAX);
+	khtml_puts(&r->html, p->unames);
+	khtml_puts(&r->html, " ");
+	khtml_puts(&r->html, p->unamer);
+	khtml_closeelem(&r->html, 1); /* cell */
 
-	get_print_time(req, p->start, p->env);
-	get_print_time(req, p->env, p->depend);
-	get_print_time(req, p->depend, p->build);
-	get_print_time(req, p->build, p->test);
-	get_print_time(req, p->test, p->install);
-	get_print_time(req, p->install, p->distcheck);
-	khtml_closeelem(req, 1);
+	gen_html_offs(&r->html, "cell "
+		"report-env", p->start, p->env);
+	gen_html_offs(&r->html, "cell "
+		"report-deps", p->env, p->depend);
+	gen_html_offs(&r->html, "cell "
+		"report-build", p->depend, p->build);
+	gen_html_offs(&r->html, "cell "
+		"report-regress", p->build, p->test);
+	gen_html_offs(&r->html, "cell "
+		"report-install", p->test, p->install);
+	gen_html_offs(&r->html, "cell "
+		"report-dist", p->install, p->distcheck);
+
+	khtml_closeelem(&r->html, 1); /* row */
+	free(url);
 }
 
+/*
+ * List a single record as text/html.
+ * Outputs HTTP 404 (error) or 200 (success).
+ */
 static void
-get_html(struct kreq *r)
+get_html_single(struct kreq *r)
 {
 	struct khtmlreq	 req;
+	struct report	*p;
+	struct kpair	*kp;
+	char		 buf[64];
+
+	kp = r->fieldmap[VALID_REPORT_ID];
+	assert(kp != NULL);
+	p = db_report_get_byid(r->arg, 
+		kp->parsed.i); /* id */
+	if (p == NULL) {
+		http_open(r, KHTTP_404, KMIME__MAX);
+		return;
+	}
 
 	http_open(r, KHTTP_200, r->mime);
 
 	khtml_open(&req, r, 0);
 	khtml_elem(&req, KELEM_HTML);
 	khtml_elem(&req, KELEM_HEAD);
-	khtml_elem(&req, KELEM_STYLE);
-	khtml_puts(&req, "td.success { background-color: rgba(0, 255, 0, 0.2); }");
-	khtml_puts(&req, "td.fail { background-color: rgba(255, 0, 0, 0.5); }");
-	khtml_puts(&req, "th, td { padding: 0.5rem 1rem; }");
-	khtml_puts(&req, "table { border-spacing: unset; }");
-	khtml_closeelem(&req, 1);
-	khtml_closeelem(&req, 1);
+	khtml_attrx(&req, KELEM_LINK, 
+		KATTR_REL, KATTRX_STRING, "stylesheet",
+		KATTR_HREF, KATTRX_STRING, "/minci.css",
+		KATTR__MAX);
+	khtml_closeelem(&req, 1); /* head */
 	khtml_elem(&req, KELEM_BODY);
-	khtml_elem(&req, KELEM_TABLE);
-	khtml_elem(&req, KELEM_THEAD);
-	get_print_report_header(&req);
-	khtml_closeelem(&req, 1);
-	khtml_elem(&req, KELEM_TBODY);
-	db_report_iterate_last(r->arg, get_print_report, &req);
-	khtml_closeelem(&req, 1);
-	khtml_closeelem(&req, 1);
-	khtml_closeelem(&req, 1);
-	khtml_closeelem(&req, 1);
+
+	khtml_elem(&req, KELEM_DIV);
+	khtml_int(&req, p->id);
+	khtml_closeelem(&req, 1); /* div */
+
+	khtml_elem(&req, KELEM_DIV);
+	khtml_puts(&req, p->project.name);
+	khtml_closeelem(&req, 1); /* div */
+
+	khtml_elem(&req, KELEM_DIV);
+	khtml_attrx(&req, KELEM_TIME,
+		KATTR_DATETIME, KATTRX_INT, 
+		p->start, KATTR__MAX);
+	kutil_epoch2str(p->start, buf, sizeof(buf));
+	khtml_puts(&req, buf);
+	khtml_closeelem(&req, 1); /* time */
+	khtml_closeelem(&req, 1); /* div */
+
+	khtml_elem(&req, KELEM_DIV);
+	khtml_puts(&req, p->unames);
+	khtml_puts(&req, " ");
+	khtml_puts(&req, p->unamer);
+	khtml_closeelem(&req, 1); /* div */
+
+	gen_html_offs(&req, "report-env", p->start, p->env);
+	gen_html_offs(&req, "report-deps", p->env, p->depend);
+	gen_html_offs(&req, "report-build", p->depend, p->build);
+	gen_html_offs(&req, "report-regress", p->build, p->test);
+	gen_html_offs(&req, "report-install", p->test, p->install);
+	gen_html_offs(&req, "report-dist", p->install, p->distcheck);
+
+	khtml_closeelem(&req, 1); /* body */
+	khtml_closeelem(&req, 1); /* html */
 	khtml_close(&req);
+	db_report_free(p);
 }
 
+/*
+ * List the last *n* records, sorted by time of accept.
+ * Always outputs HTTP 200.
+ */
+static void
+gen_html_last(struct kreq *r)
+{
+	struct req	 req;
+
+	req.r = r;
+	http_open(r, KHTTP_200, r->mime);
+	khtml_open(&req.html, r, 0);
+
+	khtml_elem(&req.html, KELEM_HTML);
+	khtml_elem(&req.html, KELEM_HEAD);
+	khtml_attrx(&req.html, KELEM_LINK, 
+		KATTR_REL, KATTRX_STRING, "stylesheet",
+		KATTR_HREF, KATTRX_STRING, "/minci.css",
+		KATTR__MAX);
+	khtml_closeelem(&req.html, 1); /* head */
+	khtml_elem(&req.html, KELEM_BODY);
+	khtml_attr(&req.html, KELEM_DIV, 
+		KATTR_CLASS, "table", KATTR__MAX);
+	gen_html_last_header(&req.html);
+	db_report_iterate_last(r->arg, 
+		get_html_last_report, &req);
+	khtml_closeelem(&req.html, 1); /* table */
+	khtml_closeelem(&req.html, 1); /* body */
+	khtml_closeelem(&req.html, 1); /* html */
+	khtml_close(&req.html);
+}
+
+/*
+ * List one or more records as text/html.
+ */
 static void
 get(struct kreq *r)
 {
 
-	return get_html(r);
+	if (r->fieldmap[VALID_REPORT_ID] != NULL)
+		get_html_single(r);
+	else
+		gen_html_last(r);
 }
 
+/*
+ * Process a record submission.
+ * Records are signed into a non-ORT field "signature".
+ * This performs all sanity checks: failure is sequentially consistent,
+ * timestamps are increasing, etc.
+ * It outputs only HTTP 403 (error) and 201 (success).
+ */
 static void
 post(struct kreq *r)
 {
@@ -207,7 +333,10 @@ post(struct kreq *r)
 	char		 digest[MD5_DIGEST_STRING_LENGTH],
 			 logdigest[MD5_DIGEST_STRING_LENGTH];
 
-	/* Signature must be 32-byte string. */
+	/* 
+	 * Check our non-ORT signature field was given.
+	 * It must be a 32-byte string.
+	 */
 
 	for (sig = NULL, i = 0; i < r->fieldsz; i++)
 		if (strcmp(r->fields[i].key, "signature") == 0 &&
@@ -217,7 +346,7 @@ post(struct kreq *r)
 			break;
 		}
 
-	/* Check our input is sane. */
+	/* Check our ORT fields were given. */
 
 	if (sig == NULL ||
 	    (kpn = r->fieldmap[VALID_PROJECT_NAME]) == NULL ||
@@ -237,11 +366,11 @@ post(struct kreq *r)
 	    (kpu = r->fieldmap[VALID_USER_APIKEY]) == NULL) {
 		kutil_warnx(r, NULL, "invalid request");
 		http_open(r, KHTTP_403, KMIME__MAX);
-		return;
+		goto out;
 	}
 
 	/* 
-	 * If stages fail, subsequent must also fail. 
+	 * Check that if stages fail, subsequent must also fail. 
 	 * Also, the log should only be specified on failure.
 	 */
 
@@ -268,10 +397,15 @@ post(struct kreq *r)
 	    (kpc->parsed.i != 0 && kpl->valsz)) {
 		kutil_warnx(r, NULL, "invalid stages");
 		http_open(r, KHTTP_403, KMIME__MAX);
-		return;
+		goto out;
 	}
 
-	/* Time must increase. */
+	/* 
+	 * Check that times must increase.
+	 * FIXME: the minci.sh script uses `date +%s` to create
+	 * timestamps, which of course aren't guaranteed to increase
+	 * (though it's unlikely they won't).
+	 */
 
 	if ((kpe->parsed.i != 0 && kpe->parsed.i < kps->parsed.i) ||
 	    (kpd->parsed.i != 0 && kpd->parsed.i < kpe->parsed.i) ||
@@ -281,6 +415,7 @@ post(struct kreq *r)
 	    (kpc->parsed.i != 0 && kpc->parsed.i < kpi->parsed.i)) {
 		kutil_warnx(r, NULL, "invalid timestamp sequence");
 		http_open(r, KHTTP_403, KMIME__MAX);
+		goto out;
 	}
 
 	/* Hash log digest (may be zero-length). */
@@ -289,7 +424,7 @@ post(struct kreq *r)
 	MD5Update(&ctx, kpl->parsed.s, kpl->valsz);
 	MD5End(&ctx, logdigest);
 
-	/* Get the project. */
+	/* Get the project and user. */
 
 	proj = db_project_get_byname(r->arg,
 		kpn->parsed.s); /* name */
@@ -298,8 +433,6 @@ post(struct kreq *r)
 		http_open(r, KHTTP_403, KMIME__MAX);
 		goto out;
 	}
-
-	/* Get the user. */
 
 	user = db_user_get_bykey(r->arg,
 		kpu->parsed.i); /* apikey */
@@ -345,6 +478,7 @@ post(struct kreq *r)
 		kpus->parsed.s,
 		kpuv->parsed.s,
 		user->apisecret);
+
 	MD5Init(&ctx);
 	MD5Update(&ctx, buf, sz);
 	MD5End(&ctx, digest);
