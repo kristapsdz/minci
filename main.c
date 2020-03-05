@@ -80,6 +80,10 @@ gen_html_offs(struct khtmlreq *req,
 			KATTRX_INT, given, KATTR__MAX);
 		khtml_int(req, given - start);
 		khtml_closeelem(req, 1); /* time */
+	} else {
+		khtml_attr(req, KELEM_SPAN, 
+			KATTR_CLASS, "fail", KATTR__MAX);
+		khtml_closeelem(req, 1); /* span */
 	}
 	khtml_closeelem(req, 1); /* div */
 }
@@ -94,34 +98,37 @@ gen_html_last_header(struct khtmlreq *req)
 	khtml_attr(req, KELEM_DIV, 
 		KATTR_CLASS, "row", KATTR__MAX);
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
-		"header report-id", KATTR__MAX);
+		"head report-id", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
-		"header project-name", KATTR__MAX);
+		"head report-start", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
-		"header report-start", KATTR__MAX);
+		"head project-name", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
-		"header report-system", KATTR__MAX);
+		"head report-system", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, 
+		KATTR_CLASS, "cellgroup", KATTR__MAX);
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"head report-env", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
-		"header report-env", KATTR__MAX);
+		"head report-deps", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
-		"header report-deps", KATTR__MAX);
+		"head report-build", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
-		"header report-build", KATTR__MAX);
+		"head report-regress", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
-		"header report-regress", KATTR__MAX);
+		"head report-install", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
-		"header report-install", KATTR__MAX);
-	khtml_closeelem(req, 1); /* cell */
-	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
-		"header report-dist", KATTR__MAX);
+		"head report-dist", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cellgroup */
 	khtml_closeelem(req, 1); /* cell */
 	khtml_closeelem(req, 1); /* row */
 }
@@ -152,13 +159,14 @@ get_html_last_report(const struct report *p, void *arg)
 		"cell report-id", KATTR__MAX);
 	khtml_attr(&r->html, KELEM_A,
 		KATTR_HREF, url, KATTR__MAX);
+	if (p->id < 1000)
+		khtml_int(&r->html, 0);
+	if (p->id < 100)
+		khtml_int(&r->html, 0);
+	if (p->id < 10)
+		khtml_int(&r->html, 0);
 	khtml_int(&r->html, p->id);
 	khtml_closeelem(&r->html, 1); /* link */
-	khtml_closeelem(&r->html, 1); /* cell */
-
-	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
-		"cell project-name", KATTR__MAX);
-	khtml_puts(&r->html, p->project.name);
 	khtml_closeelem(&r->html, 1); /* cell */
 
 	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
@@ -167,10 +175,19 @@ get_html_last_report(const struct report *p, void *arg)
 		KATTR_DATETIME, KATTRX_INT, p->start, KATTR__MAX);
 	khtml_int(&r->html, tm.tm_year + 1900);
 	khtml_puts(&r->html, "-");
+	if (tm.tm_mon < 9)
+		khtml_int(&r->html, 0);
 	khtml_int(&r->html, tm.tm_mon + 1);
 	khtml_puts(&r->html, "-");
+	if (tm.tm_mday < 10)
+		khtml_int(&r->html, 0);
 	khtml_int(&r->html, tm.tm_mday);
 	khtml_closeelem(&r->html, 1); /* time */
+	khtml_closeelem(&r->html, 1); /* cell */
+
+	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
+		"cell project-name", KATTR__MAX);
+	khtml_puts(&r->html, p->project.name);
 	khtml_closeelem(&r->html, 1); /* cell */
 
 	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
@@ -180,6 +197,8 @@ get_html_last_report(const struct report *p, void *arg)
 	khtml_puts(&r->html, p->unamer);
 	khtml_closeelem(&r->html, 1); /* cell */
 
+	khtml_attr(&r->html, KELEM_DIV,
+		KATTR_CLASS, "cellgroup", KATTR__MAX);
 	gen_html_offs(&r->html, "cell "
 		"report-env", p->start, p->env);
 	gen_html_offs(&r->html, "cell "
@@ -192,6 +211,7 @@ get_html_last_report(const struct report *p, void *arg)
 		"report-install", p->test, p->install);
 	gen_html_offs(&r->html, "cell "
 		"report-dist", p->install, p->distcheck);
+	khtml_closeelem(&r->html, 1); /* cellgroup */
 
 	khtml_closeelem(&r->html, 1); /* row */
 	free(url);
@@ -221,8 +241,13 @@ get_html_single(struct kreq *r)
 	http_open(r, KHTTP_200, r->mime);
 
 	khtml_open(&req, r, 0);
+	khtml_elem(&req, KELEM_DOCTYPE);
 	khtml_elem(&req, KELEM_HTML);
 	khtml_elem(&req, KELEM_HEAD);
+	khtml_attr(&req, KELEM_META, 
+		KATTR_NAME, "viewport",
+		KATTR_CONTENT, "width=device-width, initial-scale=1",
+		KATTR__MAX);
 	khtml_attrx(&req, KELEM_LINK, 
 		KATTR_REL, KATTRX_STRING, "stylesheet",
 		KATTR_HREF, KATTRX_STRING, "/minci.css",
@@ -230,15 +255,24 @@ get_html_single(struct kreq *r)
 	khtml_closeelem(&req, 1); /* head */
 	khtml_elem(&req, KELEM_BODY);
 
-	khtml_elem(&req, KELEM_DIV);
+	khtml_attr(&req, KELEM_DIV, KATTR_CLASS, 
+		"lefthead report-id", KATTR__MAX);
+	if (p->id < 1000)
+		khtml_int(&req, 0);
+	if (p->id < 100)
+		khtml_int(&req, 0);
+	if (p->id < 10)
+		khtml_int(&req, 0);
 	khtml_int(&req, p->id);
 	khtml_closeelem(&req, 1); /* div */
 
-	khtml_elem(&req, KELEM_DIV);
+	khtml_attr(&req, KELEM_DIV, KATTR_CLASS, 
+		"lefthead project-name", KATTR__MAX);
 	khtml_puts(&req, p->project.name);
 	khtml_closeelem(&req, 1); /* div */
 
-	khtml_elem(&req, KELEM_DIV);
+	khtml_attr(&req, KELEM_DIV, KATTR_CLASS, 
+		"lefthead report-start", KATTR__MAX);
 	khtml_attrx(&req, KELEM_TIME,
 		KATTR_DATETIME, KATTRX_INT, 
 		p->start, KATTR__MAX);
@@ -247,18 +281,38 @@ get_html_single(struct kreq *r)
 	khtml_closeelem(&req, 1); /* time */
 	khtml_closeelem(&req, 1); /* div */
 
-	khtml_elem(&req, KELEM_DIV);
+	khtml_attr(&req, KELEM_DIV, KATTR_CLASS,
+		"lefthead report-system-ext", KATTR__MAX);
 	khtml_puts(&req, p->unames);
 	khtml_puts(&req, " ");
+	khtml_puts(&req, p->unamen);
+	khtml_puts(&req, " ");
 	khtml_puts(&req, p->unamer);
+	khtml_puts(&req, " ");
+	khtml_puts(&req, p->unamev);
+	khtml_puts(&req, " ");
+	khtml_puts(&req, p->unamem);
 	khtml_closeelem(&req, 1); /* div */
 
-	gen_html_offs(&req, "report-env", p->start, p->env);
-	gen_html_offs(&req, "report-deps", p->env, p->depend);
-	gen_html_offs(&req, "report-build", p->depend, p->build);
-	gen_html_offs(&req, "report-regress", p->build, p->test);
-	gen_html_offs(&req, "report-install", p->test, p->install);
-	gen_html_offs(&req, "report-dist", p->install, p->distcheck);
+	gen_html_offs(&req, "lefthead "
+		"report-env", p->start, p->env);
+	gen_html_offs(&req, "lefthead "
+		"report-deps", p->env, p->depend);
+	gen_html_offs(&req, "lefthead "
+		"report-build", p->depend, p->build);
+	gen_html_offs(&req, "lefthead "
+		"report-regress", p->build, p->test);
+	gen_html_offs(&req, "lefthead "
+		"report-install", p->test, p->install);
+	gen_html_offs(&req, "lefthead "
+		"report-dist", p->install, p->distcheck);
+
+	if (p->log[0] != '\0') {
+		khtml_attr(&req, KELEM_DIV, KATTR_CLASS,
+			"lefthead report-log", KATTR__MAX);
+		khtml_puts(&req, p->log);
+		khtml_closeelem(&req, 1); /* div */
+	}
 
 	khtml_closeelem(&req, 1); /* body */
 	khtml_closeelem(&req, 1); /* html */
@@ -279,8 +333,13 @@ gen_html_last(struct kreq *r)
 	http_open(r, KHTTP_200, r->mime);
 	khtml_open(&req.html, r, 0);
 
+	khtml_elem(&req.html, KELEM_DOCTYPE);
 	khtml_elem(&req.html, KELEM_HTML);
 	khtml_elem(&req.html, KELEM_HEAD);
+	khtml_attr(&req.html, KELEM_META, 
+		KATTR_NAME, "viewport",
+		KATTR_CONTENT, "width=device-width, initial-scale=1",
+		KATTR__MAX);
 	khtml_attrx(&req.html, KELEM_LINK, 
 		KATTR_REL, KATTRX_STRING, "stylesheet",
 		KATTR_HREF, KATTRX_STRING, "/minci.css",

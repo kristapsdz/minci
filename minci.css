@@ -1,29 +1,57 @@
+html, body			{ margin: 0; }
+body				{ font-family: sans-serif; }
 .table				{ width: 100%; }
-.cell.report-id::before		{ content: 'Report: '; }
-.cell.project-name::before	{ content: 'Project: '; }
-.cell.report-start::before	{ content: 'Started: '; }
-.cell.report-env::before	{ content: 'Pre-check: '; }
-.cell.report-deps::before	{ content: 'Deps: '; }
-.cell.report-build::before	{ content: 'Build: '; }
-.cell.report-regress::before	{ content: 'Test: '; }
-.cell.report-install::before	{ content: 'Install: '; }
-.cell.report-dist::before	{ content: 'Check: '; }
-.cell.report-system::before	{ content: 'System: '; }
-.cell::before			{ text-align: right;
-				  display: inline-block;
-				  padding-right: 1rem;
-				  width: 6rem; }
-.row				{ padding: 0.5rem 0; }
+.table > :nth-child(odd)	{ background-color: #f0f0f0; }
+.table > :first-child		{ display: none;
+				  background-color: #666;
+				  font-weight: bold;
+				  text-shadow: 0 0 #000;
+				  color: #fff; }
+.cell.report-id,
+.cell.report-start,
+.cell.project-name		{ display: inline-block; }
+.cell.report-start::after,
+.cell.report-id::after		{ content: ', ';
+				  opacity: 0.5;
+				  margin-right: 0.2rem; }
+.cell.report-id::before		{ content: '#';
+			 	  opacity: 0.5; }
+.cell.report-env::before	{ content: 'env'; }
+.cell.report-deps::before	{ content: 'deps'; }
+.cell.report-build::before	{ content: 'build'; }
+.cell.report-regress::before	{ content: 'test'; }
+.cell.report-install::before	{ content: 'install'; }
+.cell.report-dist::before	{ content: 'check'; }
+.cell.report-system::before	{ content: 'System ';
+				  opacity: 0.5; }
+.row				{ padding: 0.5rem; }
 .cell				{ padding: 0.25rem 0; }
+.cellgroup			{ display: flex; }
+.cellgroup .cell		{ flex: 1; }
+.cellgroup .cell::before	{ display: block;
+				  padding-right: 0;
+				  opacity: 0.5;
+				  padding-bottom: 0.25rem;
+				  width: auto; }
+.cellgroup .cell time::after	{ content: ' s.';
+				  opacity: 0.5; }
+.cellgroup .cell span::after	{ content: '-';
+				  color: red; }
+.report-log			{ white-space: pre; }
 
-@media (min-width: 66rem) {
-  .table > .row			{ display: flex; }
-  .cell				{ width: 2em;
+@media (min-width: 80rem) {
+  html, body			{ margin: 1rem 0; }
+  .table			{ max-width: 88rem;
+	  			  margin: 0 auto; }
+  .table > :first-child,
+  .row				{ display: flex; }
+  .head, .cell			{ width: 4rem;
 				  padding: 0 1rem; }
-  .cell.project-name		{ width: 10rem; }
-  .cell.report-start		{ width: 10rem; }
-  .cell.report-system		{ flex: 1; }
-  .cell.report-id::before,
+  .head.project-name,
+  .cell.project-name		{ width: 8rem; }
+  .head.report-start,
+  .cell.report-start		{ width: 6rem; }
+  .report-system		{ flex: 1; }
   .cell.project-name::before,
   .cell.report-start::before,
   .cell.report-env::before,
@@ -32,7 +60,19 @@
   .cell.report-regress::before,
   .cell.report-install::before,
   .cell.report-dist::before,
-  .cell.report-system::before	{ content: none; }
-  .cell::before			{ width: auto;
-	  			  padding-right: 0; }
+  .cell.report-system::before	{ content: none;
+	  			  padding: 0; }
+  .cell.report-start::after,
+  .cell.report-id::after	{ content: none;
+	  			  margin-right: 0; }
+  .head.project-name::before	{ content: 'project'; }
+  .head.report-start::before	{ content: 'date'; }
+  .head.report-env::before	{ content: 'env'; }
+  .head.report-deps::before	{ content: 'deps'; }
+  .head.report-build::before	{ content: 'build'; }
+  .head.report-regress::before	{ content: 'test'; }
+  .head.report-install::before	{ content: 'install'; }
+  .head.report-dist::before	{ content: 'check'; }
+  .head.report-system-ext::before,
+  .head.report-system::before	{ content: 'system'; }
 }
