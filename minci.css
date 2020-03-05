@@ -1,57 +1,85 @@
-html, body			{ margin: 0; }
-body				{ font-family: sans-serif; }
-.table				{ width: 100%; }
-.table > :nth-child(odd)	{ background-color: #f0f0f0; }
-.table > :first-child		{ display: none;
-				  background-color: #666;
-				  font-weight: bold;
-				  text-shadow: 0 0 #000;
-				  color: #fff; }
+html, body				{ margin: 0; }
+body					{ font-family: sans-serif; }
+.table					{ width: 100%; }
+.singleton				{ width: calc(100% - 1rem);
+					  max-width: 66rem;
+					  margin: 1rem auto; }
+.table > :nth-child(odd)		{ background-color: #f0f0f0; }
+.table > :first-child			{ display: none;
+					  background-color: #666;
+					  font-weight: bold;
+					  text-shadow: 0 0 #000;
+					  color: #fff; }
+.lefthead.report-id,
+.lefthead.project-name,
 .cell.report-id,
 .cell.report-start,
-.cell.project-name		{ display: inline-block; }
+.cell.project-name			{ display: inline-block; }
+.lefthead.report-id::after,
 .cell.report-start::after,
-.cell.report-id::after		{ content: ', ';
-				  opacity: 0.5;
-				  margin-right: 0.2rem; }
-.cell.report-id::before		{ content: '#';
-			 	  opacity: 0.5; }
-.cell.report-env::before	{ content: 'env'; }
-.cell.report-deps::before	{ content: 'deps'; }
-.cell.report-build::before	{ content: 'build'; }
-.cell.report-regress::before	{ content: 'test'; }
-.cell.report-install::before	{ content: 'install'; }
-.cell.report-dist::before	{ content: 'check'; }
-.cell.report-system::before	{ content: 'System ';
-				  opacity: 0.5; }
-.row				{ padding: 0.5rem; }
-.cell				{ padding: 0.25rem 0; }
-.cellgroup			{ display: flex; }
-.cellgroup .cell		{ flex: 1; }
-.cellgroup .cell::before	{ display: block;
-				  padding-right: 0;
-				  opacity: 0.5;
-				  padding-bottom: 0.25rem;
-				  width: auto; }
-.cellgroup .cell time::after	{ content: ' s.';
-				  opacity: 0.5; }
-.cellgroup .cell span::after	{ content: '-';
-				  color: red; }
-.report-log			{ white-space: pre; }
+.cell.report-id::after			{ content: ', ';
+					  opacity: 0.5;
+					  margin-right: 0.2rem; }
+.lefthead.report-id::before,
+.cell.report-id::before			{ content: '#';
+					  opacity: 0.5; }
+.cell.report-env::before		{ content: 'env'; }
+.cell.report-deps::before		{ content: 'deps'; }
+.cell.report-build::before		{ content: 'build'; }
+.cell.report-regress::before		{ content: 'test'; }
+.cell.report-install::before		{ content: 'install'; }
+.cell.report-dist::before		{ content: 'check'; }
+.cell.report-system::before		{ content: 'System ';
+					  opacity: 0.5; }
+.row					{ padding: 0.5rem; }
+.cell					{ padding: 0.25rem 0; }
+.cellgroup				{ display: flex; }
+.cellgroup .cell			{ flex: 1; }
+.cellgroup .cell::before		{ display: block;
+					  padding-right: 0;
+					  opacity: 0.5;
+					  padding-bottom: 0.25rem;
+					  width: auto; }
+.leftgroup time::after,
+.cellgroup .cell time::after		{ content: ' s.';
+					  opacity: 0.5; }
+.leftgroup span::after,
+.cellgroup .cell span::after		{ content: '-';
+					  color: red; }
+.report-log				{ white-space: pre;
+					  overflow: hidden;
+					  font-family: monospace;
+					  font-size: 8pt;
+					  text-overflow: ellipsis; }
+.lefthead.report-env::before		{ content: 'Env: '; }
+.lefthead.report-deps::before		{ content: 'Deps: '; }
+.lefthead.report-build::before		{ content: 'Build: '; }
+.lefthead.report-regress::before	{ content: 'Test: '; }
+.lefthead.report-install::before	{ content: 'Install: '; }
+.lefthead.report-dist::before		{ content: 'Check: '; }
+.leftgroup .lefthead::before		{ opacity: 0.5;
+					  width: 5rem;
+					  text-align: right;
+					  display: inline-block;
+					  padding-right: 0.25rem; }
+.lefthead.report-log::before		{ content: 'Fail log...';
+					  opacity: 0.5;
+					  color: red;
+					  display: block; }
 
 @media (min-width: 80rem) {
-  html, body			{ margin: 1rem 0; }
-  .table			{ max-width: 88rem;
-	  			  margin: 0 auto; }
+  html, body				{ margin: 1rem 0; }
+  .table				{ max-width: 88rem;
+					  margin: 0 auto; }
   .table > :first-child,
-  .row				{ display: flex; }
-  .head, .cell			{ width: 4rem;
-				  padding: 0 1rem; }
+  .row					{ display: flex; }
+  .head, .cell				{ width: 4rem;
+					  padding: 0 1rem; }
   .head.project-name,
-  .cell.project-name		{ width: 8rem; }
+  .cell.project-name			{ width: 8rem; }
   .head.report-start,
-  .cell.report-start		{ width: 6rem; }
-  .report-system		{ flex: 1; }
+  .cell.report-start			{ width: 6rem; }
+  .report-system			{ flex: 1; }
   .cell.project-name::before,
   .cell.report-start::before,
   .cell.report-env::before,

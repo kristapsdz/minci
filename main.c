@@ -76,8 +76,10 @@ gen_html_offs(struct khtmlreq *req,
 	khtml_attr(req, KELEM_DIV,
 		KATTR_CLASS, classes, KATTR__MAX);
 	if (given != 0) {
-		khtml_attrx(req, KELEM_TIME, KATTR_DATETIME,
-			KATTRX_INT, given, KATTR__MAX);
+		khtml_attrx(req, KELEM_TIME, 
+			KATTR_CLASS, KATTRX_STRING, "success",
+			KATTR_DATETIME, KATTRX_INT, given, 
+			KATTR__MAX);
 		khtml_int(req, given - start);
 		khtml_closeelem(req, 1); /* time */
 	} else {
@@ -244,7 +246,10 @@ get_html_single(struct kreq *r)
 	khtml_elem(&req, KELEM_DOCTYPE);
 	khtml_elem(&req, KELEM_HTML);
 	khtml_elem(&req, KELEM_HEAD);
-	khtml_attr(&req, KELEM_META, 
+	khtml_elem(&req, KELEM_TITLE);
+	khtml_puts(&req, "BSD.lv: Minimal CI Report");
+	khtml_closeelem(&req, 1); /* title */
+	khtml_attr(&req, KELEM_META,
 		KATTR_NAME, "viewport",
 		KATTR_CONTENT, "width=device-width, initial-scale=1",
 		KATTR__MAX);
@@ -255,6 +260,8 @@ get_html_single(struct kreq *r)
 	khtml_closeelem(&req, 1); /* head */
 	khtml_elem(&req, KELEM_BODY);
 
+	khtml_attr(&req, KELEM_DIV,
+		KATTR_CLASS, "singleton", KATTR__MAX);
 	khtml_attr(&req, KELEM_DIV, KATTR_CLASS, 
 		"lefthead report-id", KATTR__MAX);
 	if (p->id < 1000)
@@ -294,6 +301,8 @@ get_html_single(struct kreq *r)
 	khtml_puts(&req, p->unamem);
 	khtml_closeelem(&req, 1); /* div */
 
+	khtml_attr(&req, KELEM_DIV,
+		KATTR_CLASS, "leftgroup", KATTR__MAX);
 	gen_html_offs(&req, "lefthead "
 		"report-env", p->start, p->env);
 	gen_html_offs(&req, "lefthead "
@@ -306,6 +315,7 @@ get_html_single(struct kreq *r)
 		"report-install", p->test, p->install);
 	gen_html_offs(&req, "lefthead "
 		"report-dist", p->install, p->distcheck);
+	khtml_closeelem(&req, 1); /* div */
 
 	if (p->log[0] != '\0') {
 		khtml_attr(&req, KELEM_DIV, KATTR_CLASS,
@@ -314,6 +324,7 @@ get_html_single(struct kreq *r)
 		khtml_closeelem(&req, 1); /* div */
 	}
 
+	khtml_closeelem(&req, 1); /* div */
 	khtml_closeelem(&req, 1); /* body */
 	khtml_closeelem(&req, 1); /* html */
 	khtml_close(&req);
@@ -336,6 +347,9 @@ gen_html_last(struct kreq *r)
 	khtml_elem(&req.html, KELEM_DOCTYPE);
 	khtml_elem(&req.html, KELEM_HTML);
 	khtml_elem(&req.html, KELEM_HEAD);
+	khtml_elem(&req.html, KELEM_TITLE);
+	khtml_puts(&req.html, "BSD.lv: Recent Minimal CI Reports");
+	khtml_closeelem(&req.html, 1); /* title */
 	khtml_attr(&req.html, KELEM_META, 
 		KATTR_NAME, "viewport",
 		KATTR_CONTENT, "width=device-width, initial-scale=1",
