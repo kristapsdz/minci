@@ -166,14 +166,21 @@ get_html_last_report(const struct report *p, void *arg)
 {
 	struct req	*r = arg;
 	struct tm	 tm;
-	char		*url;
+	char		*urlid, *urlproj;
 
-	url = kutil_urlpartx(NULL,
+	urlid = kutil_urlpartx(NULL,
 		r->r->pname, 
 		ksuffixes[KMIME_TEXT_HTML],
 		pages[PAGE_INDEX],
 		valid_keys[VALID_REPORT_ID].name,
 		KATTRX_INT, p->id, NULL);
+	urlproj = kutil_urlpartx(NULL,
+		r->r->pname, 
+		ksuffixes[KMIME_TEXT_HTML],
+		pages[PAGE_INDEX],
+		valid_keys[VALID_PROJECT_NAME].name,
+		KATTRX_STRING, p->project.name, NULL);
+
 	memset(&tm, 0, sizeof(struct tm));
 	KUTIL_EPOCH2TM(p->start, &tm);
 
@@ -183,7 +190,7 @@ get_html_last_report(const struct report *p, void *arg)
 	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
 		"cell report-id", KATTR__MAX);
 	khtml_attr(&r->html, KELEM_A,
-		KATTR_HREF, url, KATTR__MAX);
+		KATTR_HREF, urlid, KATTR__MAX);
 	if (p->id < 1000)
 		khtml_int(&r->html, 0);
 	if (p->id < 100)
@@ -212,7 +219,10 @@ get_html_last_report(const struct report *p, void *arg)
 
 	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
 		"cell project-name", KATTR__MAX);
+	khtml_attr(&r->html, KELEM_A, 
+		KATTR_HREF, urlproj, KATTR__MAX);
 	khtml_puts(&r->html, p->project.name);
+	khtml_closeelem(&r->html, 1); /* a */
 	khtml_closeelem(&r->html, 1); /* cell */
 
 	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
@@ -239,7 +249,8 @@ get_html_last_report(const struct report *p, void *arg)
 	khtml_closeelem(&r->html, 1); /* cellgroup */
 
 	khtml_closeelem(&r->html, 1); /* row */
-	free(url);
+	free(urlid);
+	free(urlproj);
 }
 
 /*
@@ -428,6 +439,36 @@ get_last(struct kreq *r)
 }
 
 /*
+ * List the last *n* records, sorted by time of accept.
+ * Always outputs HTTP 200.
+ */
+static void
+get_lastproj(struct kreq *r)
+{
+	struct req	 req;
+	struct kpair	*kp;
+
+	kp = r->fieldmap[VALID_PROJECT_NAME];
+	assert(kp != NULL);
+
+	req.r = r;
+	http_open(r, KHTTP_200, r->mime);
+
+	khtml_open(&req.html, r, 0);
+	html_open(&req.html, "Recent Minimal CI Reports");
+	khtml_attr(&req.html, KELEM_DIV, 
+		KATTR_CLASS, "table", KATTR__MAX);
+	get_html_last_header(&req.html);
+	db_report_iterate_lastproj(r->arg, 
+		get_html_last_report, &req,
+		kp->parsed.s); /* project.name */
+	khtml_closeelem(&req.html, 1); /* table */
+	khtml_closeelem(&req.html, 1); /* body */
+	khtml_closeelem(&req.html, 1); /* html */
+	khtml_close(&req.html);
+}
+
+/*
  * List one or more records as text/html.
  */
 static void
@@ -436,6 +477,8 @@ get(struct kreq *r)
 
 	if (r->fieldmap[VALID_REPORT_ID] != NULL)
 		get_single(r);
+	else if (r->fieldmap[VALID_PROJECT_NAME] != NULL)
+		get_lastproj(r);
 	else
 		get_last(r);
 }

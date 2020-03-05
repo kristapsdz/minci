@@ -4,7 +4,7 @@ roles {
 };
 
 struct project {
-	field name text unique;
+	field name text limit gt 0 limit lt 32 unique;
 	field id int rowid;
 
 	search name: name byname;
@@ -52,11 +52,13 @@ struct report {
 	insert;
 
 	iterate: limit 50 name last order ctime desc;
+	iterate project.name: limit 50 name lastproj order ctime desc;
 
 	search id: name byid;
 
 	roles consumer {
 		iterate last;
+		iterate lastproj;
 		noexport userid;
 		search byid;
 	};
