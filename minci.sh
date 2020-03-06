@@ -284,7 +284,7 @@ do
 	else
 		REPORT_LOG="-F report-log="
 	fi
-	curl ${REPORT_LOG} \
+	curl -sS ${REPORT_LOG} \
 	     -F "project-name=${reponame}" \
 	     -F "report-start=${TIME_start}" \
 	     -F "report-env=${TIME_env}" \
