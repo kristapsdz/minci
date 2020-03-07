@@ -4,6 +4,7 @@ This is a minimal CI ("continuous integration") system used by BSD.lv
 projects.
 It uses a shell script as the test runner and a
 [BCHS](https://learnbchs.org) back-end server for recording results.
+The server is assumed to run on a [OpenBSD](https://www.openbsd.org) system.
 
 The CI test runner performs the following:
 
@@ -65,12 +66,14 @@ generator, you can use:
 ```sh
 email="foo@bar.com" ; \
 apikey="$RANDOM" ; \
-apisecret="`jot -r -c 32 'A' '{' | rs -g0`" ; \
+apisecret="`jot -r -c 32 'A' '{' | sed 's!\\$!-!g' | rs -g0`" ; \
 ctime="`date +%s`" ; \
 echo "INSERT INTO user (email,apikey,apisecret,ctime) \
 	VALUES (\"$email\",\"$apikey\",\"$apisecret\",\"$date\")" | \
 	sqlite3 path/to/minci.db
 ```
+
+(The `sed` makes sure that the final character isn't an escape.)
 
 Set `foo@bar.com` to be the user's email address and adjust the database
 filename.
@@ -85,8 +88,9 @@ script, server URL, and credentials are all you need.
 with super user privileges.  Ideally it should have its own user, as a
 repository might accidentally try to overwrite files it shouldn't.
 
-First, download or otherwise acquire the test runner, [minci.sh].  It
-should probably be in your *bin* directory with execute permission.
+First, download or otherwise acquire the test runner,
+[minci.sh](minci.sh).  It should probably be in your *bin* directory
+with execute permission.
 
 Next, create *~/.minci*.  (This can also be in */etc/minci*.)
 
