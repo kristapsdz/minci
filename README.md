@@ -119,3 +119,4 @@ Ideally, the runner should be executed daily by `cron`:
 The `PATH` variable may need to be set to include */usr/local/bin* or as
 required by the operating system.
 
+Alternatively, the script may be run manually for instant gratification.
