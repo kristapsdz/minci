@@ -57,17 +57,17 @@ struct report {
 	field build epoch
 		comment "When `make` has completed (ge depend or equal
 			 to zero on failure or depend failure).";
-	field test epoch;
+	field test epoch
 		comment "When `make regress` has completed (ge build or
 			 equal to zero on failure or build failure).";
-	field install epoch;
+	field install epoch
 		comment "When `make install` has completed (ge test or
-			 equal to zero on failure or test failure).");
-	field distcheck epoch;
+			 equal to zero on failure or test failure).)";
+	field distcheck epoch
 		comment "When `make distcheck` has completed (ge install
 			 or equal to zero on failure or install
 			 failure).";
-	field ctime epoch;
+	field ctime epoch
 		comment "When the report row was creatd.";
 	field log text
 		comment "If distcheck is zero, this is optionally set to
