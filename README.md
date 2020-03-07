@@ -120,3 +120,17 @@ The `PATH` variable may need to be set to include */usr/local/bin* or as
 required by the operating system.
 
 Alternatively, the script may be run manually for instant gratification.
+
+# Security
+
+First, the server only runs on OpenBSD and makes significant use of pledging,
+unveiling, and separation using
+[openradtool](https://kristaps.bsd.lv/openradtool)'s underlying
+[kcgi](https://kristaps.bsd.lv/kcgi) and
+[sqlbox](https://kristaps.bsd.lv/sqlbox) features.
+
+Messages between the runner and server are authenticated by hashing the entire
+message (in a well-defined order) with the user's secret API key.  The server,
+which also has the secret key, hashes the message contents as well and compares
+the signature.  If the signature matches, the report is authentic.
+
