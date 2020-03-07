@@ -4,7 +4,12 @@ roles {
 };
 
 struct project {
-	field name text limit gt 0 limit lt 32 unique;
+	field name text limit gt 0 limit lt 32 unique
+		comment "The project name.  This is assumed to have some
+			 sort of meaning between testers and backend.
+			 As-is, the name is assumed to be the name of a
+			 GitHub repository in my (kristapsdz) repo.  It
+			 can be set as a compile-time value.";
 	field id int rowid;
 
 	search name: name byname;
@@ -15,10 +20,16 @@ struct project {
 };
 
 struct user {
-	field email email;
-	field apikey int limit gt 0 unique;
-	field apisecret text limit eq 32;
-	field ctime epoch;
+	field email email
+		comment "Only used for logging purposes.";
+	field apikey int limit gt 0 unique
+		comment "Unique user identifier.";
+	field apisecret text limit eq 32
+		comment "Secret known to the database and the user, but
+			 not transmitted between.  This is used for
+			 authenticating reports.";
+	field ctime epoch
+		comment "When the user was created.";
 	field id int rowid;
 
 	search apikey: name bykey;
@@ -33,32 +44,59 @@ struct report {
 
 	field projectid:project.id;
 	field userid:user.id;
-	field start epoch;
-	field env epoch;
+
+	field start epoch
+		comment "When the test runner started processing the
+			 repository.";
+	field env epoch
+		comment "When the repository has been cloned/updated (ge
+			 start or zero on failure.";
 	field depend epoch;
-	field build epoch;
+		comment "When dependencies have been checked (ge env or
+			 equal or zero on failure or env failure).";
+	field build epoch
+		comment "When `make` has completed (ge depend or equal
+			 to zero on failure or depend failure).";
 	field test epoch;
+		comment "When `make regress` has completed (ge build or
+			 equal to zero on failure or build failure).";
 	field install epoch;
+		comment "When `make install` has completed (ge test or
+			 equal to zero on failure or test failure).");
 	field distcheck epoch;
+		comment "When `make distcheck` has completed (ge install
+			 or equal to zero on failure or install
+			 failure).";
 	field ctime epoch;
-	field log text;
-	field unamem text limit le 128;
-	field unamen text limit le 128;
-	field unamer text limit le 128;
-	field unames text limit le 128;
-	field unamev text limit le 128;
+		comment "When the report row was creatd.";
+	field log text
+		comment "If distcheck is zero, this is optionally set to
+			 the full build log.  If distcheck is not zero,
+			 this must be the empty string.";
+	field unamem text limit le 128
+		comment "Output of uname -m.";
+	field unamen text limit le 128
+		comment "Output of uname -n.";
+	field unamer text limit le 128
+		comment "Output of uname -r.";
+	field unames text limit le 128
+		comment "Output of uname -s.";
+	field unamev text limit le 128
+		comment "Output of uname -v.";
 	field id int rowid;
 
 	insert;
 
 	iterate: limit 50 name last order ctime desc;
-	iterate project.name: limit 50 name lastproj order ctime desc;
+	iterate project.name: limit 50 name lastname order ctime desc;
+	iterate ctime ge, ctime le: limit 50 name lastdate order ctime desc;
 
 	search id: name byid;
 
 	roles consumer {
 		iterate last;
-		iterate lastproj;
+		iterate lastdate;
+		iterate lastname;
 		noexport userid;
 		search byid;
 	};
