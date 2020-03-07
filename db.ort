@@ -20,6 +20,11 @@ struct project {
 };
 
 struct user {
+	comment "Users can be totally anonymous and are just used for
+	 	 authenticating reports.
+		 To create a user, you can `echo $RANDOM` for the apikey
+		 and `jot -r -c 32 'A' '{' | rs -g0` for the secret.";
+
 	field email email
 		comment "Only used for logging purposes.";
 	field apikey int limit gt 0 unique
@@ -40,6 +45,15 @@ struct user {
 };
 
 struct report {
+	comment "Test runner results for a single repository.  The epoch
+		 fields are sequential, so they're either a time of
+		 completion of zero on failure.  On failure, all
+		 subsequent fields (e.g., build after depend) must fail
+		 as well.
+		 The log should be the standard error and output of
+		 everything that has happened in the sequence---not just
+		 the last failure.";
+
 	field project struct projectid;
 
 	field projectid:project.id;

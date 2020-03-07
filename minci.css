@@ -12,9 +12,14 @@ body					{ font-family: sans-serif; }
 					  color: #fff; }
 .lefthead.report-id,
 .lefthead.project-name,
+.lefthead.project-repo,
 .cell.report-id,
 .cell.report-start,
 .cell.project-name			{ display: inline-block; }
+.lefthead.project-name			{ border-right: thin solid #888;
+					  padding-right: 0.5rem;
+					  margin-right: 0.5rem; }
+.lefthead.project-repo::before		{ content: 'repository'; }
 .lefthead.report-id::after,
 .cell.report-start::after,
 .cell.report-id::after			{ content: ', ';
