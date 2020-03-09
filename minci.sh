@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # Usage:
-# minci.sh [repo...]
+# minci.sh [-n] [repo...]
 # Use ~/.minci or /etc/minci for configuration, whichever comes first.
 
 MAKE="make"
@@ -14,6 +14,18 @@ STAGING="$HOME/.local/cache/minci"
 CONFIG=
 CONFIG_LOCAL="$HOME/.minci"
 CONFIG_GLOBAL="/etc/minci"
+PROGNAME="$0"
+
+run()
+{
+	echo "$PROGNAME: $1: $2"
+	if [ -z "$NOOP" ]
+	then
+		echo "$PROGNAME: $1: $2" 1>&3
+		$1 1>&3 2>&3 || return 1
+	fi
+	return 0
+}
 
 args=$(getopt n $*)
 if [ $? -ne 0 ]
@@ -140,7 +152,6 @@ while read -r ln
 do
 	repo="$(echo $ln | sed -n 's!^[ ]*repo[ ]*=[ ]*!!p')"
 	[ -z "$repo" ] && continue
-
 	reponame="$(echo $repo | sed -e 's!.*/!!' -e 's!\.git$!!')"
 	if [ -z "$reponame" ]
 	then
@@ -148,7 +159,8 @@ do
 		exit 1
 	fi
 
-	# See if we should run this.
+	# Iterate through the command-line arguments, only if specified,
+	# to see if we want to run this.
 
 	if [ $# -gt 0 ]
 	then
@@ -167,20 +179,18 @@ do
 		fi
 	fi
 
+	# Get ready for actual processing.
 	# Now errors without || are fatal.
 
 	set -e
 
-	echo "$0: processing repo: $reponame"
-	echo "$0: ...parsed from: $repo"
+	echo "$0: $repo: $reponame"
 
-	if [ -z "$NOOP" ]
-	then
-		cd "$STAGING"
-	fi
+	[ -n "$NOOP" ] || exec 3>/tmp/minci.log
+	[ -n "$NOOP" ] || cd "$STAGING"
 
 	# Set all of our times to zero.
-	# If a time is non-zero when we send our ping, that means that
+	# If a time is non-zero when we send our report, that means that
 	# we've finished a phase.
 
 	TIME_start=0
@@ -191,54 +201,55 @@ do
         TIME_install=0
         TIME_distcheck=0
 
-	# This is wrapped in an infinite loop so we can just use `break`
-	# to come out of error situations.
-
-	if [ -z "$NOOP" ]
-	then
-		exec 3>/tmp/minci.log
-	fi
 	TIME_start=$(date +%s)
+
+	# This is wrapped in an infinite loop so we can just use `break`
+	# to come out of error situations and still send the report.
 
 	while :
 	do
+		head=""
+		nhead=""
+
+		# If we have a repository already, update and clean it
+		# out; otherwise, clone it afresh.
+
 		if [ -d "$reponame" ]
 		then
 			if [ -z "$NOOP" ]
 			then
 				cd "$reponame"
+				head=$(cut -f1 .git/FETCH_HEAD) || head=""
 			fi
-
-			echo "$0: git fetch origin: $reponame"
+			run "git fetch origin" "$reponame" || break
+			run "git reset --hard origin/master" "$reponame" || break
+			run "git clean -fdx" "$reponame" || break
 			if [ -z "$NOOP" ]
 			then
-				echo "$0: git fetch origin: $reponame" 1>&3
-				git fetch origin 1>&3 2>&3 || break
-			fi
-
-			echo "$0: git reset --hard origin/master: $reponame"
-			if [ -z "$NOOP" ]
-			then
-				echo "$0: git reset --hard origin/master: $reponame" 1>&3
-				git reset --hard origin/master 1>&3 2>&3 || break
-			fi
-
-			echo "$0: git clean -fdx: $reponame"
-			if [ -z "$NOOP" ]
-			then
-				echo "$0: git clean -fdx: $reponame" 1>&3
-				git clean -fdx 1>&3 2>&3 || break
+				nhead=$(cut -f1 .git/FETCH_HEAD) || nhead=""
 			fi
 		else
-			echo "$0: git clone $repo $reponame"
+			head=""
+			nhead=""
+			run "git clone $repo" "$reponame" || break
 			if [ -z "$NOOP" ]
 			then
-				echo "$0: git clone $repo $reponame" 1>&3
-				git clone "$repo" "$reponame" 1>&3 2>&3 || break
 				cd "$reponame"
+				nhead=$(cut -f1 .git/FETCH_HEAD) || nhead=""
 			fi
 		fi
+
+		if [ -n "$head" -a -n "$nhead" -a "$head" = "$nhead" ]
+		then
+			echo "$0: repository is fresh: $reponame"
+			TIME_start=0
+			break
+		fi
+
 		TIME_env=$(date +%s)
+
+		# Optional dependencies in repo's minci.cfg.
+		# I'm not using this yet.
 
 		if [ -r "minci.cfg" ]
 		then
@@ -246,64 +257,40 @@ do
 			do
 				deplib="$(echo $ln | sed -n 's!^[ ]*deplib[ ]*=[ ]*!!p')"
 				[ -n "$deplib" ] || continue
-
-				echo "$0: pkg-config --exists $deplib: $reponame"
-				if [ -z "$NOOP" ]
-				then
-					echo "$0: pkg-config --exists $deplib: $reponame" 1>&3
-					pkg-config --exists "$deplib" 1>&3 2>&3 || break
-				fi
+				run "pkg-config --exists $deplib" "$reponame" || break
 			done < "minci.cfg"
 			[ -n "$mln" ] || break
 		fi
+
+		run "./configure PREFIX=build" "$reponame" || break
 		TIME_depend=$(date +%s)
 
-		echo "$0: ./configure PREFIX=build: $reponame"
-		if [ -z "$NOOP" ]
-		then
-			echo "$0: ./configure PREFIX=build: $reponame" 1>&3
-			./configure PREFIX=build 1>&3 2>&3 || break
-		fi
-
-		echo "$0: ${MAKE}: $reponame"
-		if [ -z "$NOOP" ]
-		then
-			echo "$0: ${MAKE}: $reponame" 1>&3
-			${MAKE} 1>&3 2>&3 || break
-		fi
+		run "${MAKE}" "$reponame" || break
 		TIME_build=$(date +%s)
 
-		echo "$0: ${MAKE} regress: $reponame"
-		if [ -z "$NOOP" ]
-		then
-			echo "$0: ${MAKE} regress: $reponame" 1>&3
-			${MAKE} regress 1>&3 2>&3 || break
-		fi
+		run "${MAKE} regress" "$reponame" || break
 		TIME_test=$(date +%s)
 
-		echo "$0: ${MAKE} install: $reponame"
-		if [ -z "$NOOP" ]
-		then
-			echo "$0: ${MAKE} install: $reponame" 1>&3
-			${MAKE} install 1>&3 2>&3 || break
-		fi
+		run "${MAKE} install" "$reponame" || break
 		TIME_install=$(date +%s)
 
-		echo "$0: ${MAKE} distcheck: $reponame"
-		if [ -z "$NOOP" ]
-		then
-			echo "$0: ${MAKE} distcheck: $reponame" 1>&3
-			${MAKE} distcheck 1>&3 2>&3 || break
-		fi
+		run "${MAKE} distcheck" "$reponame" || break
 		TIME_distcheck=$(date +%s)
 		break
 	done
 
-	if [ -z "$NOOP" ]
-	then
-		exec 3>&-
-	fi
+	# Stop reporting to fd-3 and remask errors.
+	# Our house-keeping can now fail without killing us.
+
+	[ -n "$NOOP" ] || exec 3>&-
 	set +e
+
+	if [ $TIME_start -eq 0 ]
+	then
+		echo "$0: IGNORING: $reponame"
+		[ -n "$NOOP" ] || rm -f /tmp/minci.log
+		continue
+	fi
 
 	if [ $TIME_distcheck -eq 0 ]
 	then
@@ -333,10 +320,12 @@ do
 	QUERY="${QUERY}&report-install=${TIME_install}"
 	if [ $TIME_distcheck -eq 0 ]
 	then
-		QUERY="${QUERY}&report-log=$(openssl dgst -md5 -hex /tmp/minci.log | sed 's!^[^=]*= !!')"
+		hashfile="/tmp/minci.log"
 	else
-		QUERY="${QUERY}&report-log=$(openssl dgst -md5 -hex /dev/null | sed 's!^[^=]*= !!')"
+		hashfile="/dev/null"
 	fi
+	hash="$(openssl dgst -md5 -hex $hashfile | sed 's!^[^=]*= !!')"
+	QUERY="${QUERY}&report-log=$hash"
 	QUERY="${QUERY}&report-start=${TIME_start}"
 	QUERY="${QUERY}&report-test=${TIME_test}"
 	QUERY="${QUERY}&report-unamem=${UNAME_M}"
@@ -345,6 +334,10 @@ do
 	QUERY="${QUERY}&report-unames=${UNAME_S}"
 	QUERY="${QUERY}&report-unamev=${UNAME_V}"
 	QUERY="${QUERY}&user-apisecret=${API_SECRET}"
+
+	# Signature is the MD5 of ordered parameters and including our
+	# API secret.
+	# The server will perform the same steps.
 
 	SIGNATURE=$(printf "%s" "$QUERY" | openssl dgst -md5 -hex | sed 's!^[^=]*= !!')
 
