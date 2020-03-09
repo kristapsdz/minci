@@ -92,7 +92,8 @@ First, download or otherwise acquire the test runner,
 [minci.sh](minci.sh).  It should probably be in your *bin* directory
 with execute permission.
 
-Next, create *~/.minci*.  (This can also be in */etc/minci*.)
+Next, create *~/.minci*.  (If this isn't found, */etc/minci* is used.)
+You can start with the [minci.example](minci.example) example.
 
 ```
 apikey = 12345

@@ -1,0 +1,23 @@
+# Example .minci file.
+# Install this in ~/.minci or /etc/minci.
+# Only matching starting with ^[ ]*key[ ]*=[ ]* are processed.
+
+# Start with your credentials and repository.
+# The minci server administrator will give these to you.
+
+apikey = 10773
+apisecret = qxw_OYQ6VNPAZ@R@@1`s?pF?G>ml?oj?
+server = https://kristaps.bsd.lv/cgi-bin/minci.cgi
+
+# Some non-BSD systems may need to identify an alternative to `make`,
+# such as `bmake`.
+
+#bsdmake = bmake
+
+# Now your repositories.
+# List as many as required from the list given by the server
+# administrator.
+# They'll make sure that the names ("baz", in the following example), 
+# correspond to a known repository in the server.
+
+#repo = https://github.com/foobar/baz.git
