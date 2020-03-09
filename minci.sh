@@ -6,7 +6,7 @@
 
 MAKE="make"
 API_SECRET=
-DEP_BINS="mandoc pkg-config openssl git curl"
+DEP_BINS="mandoc openssl git curl"
 NOOP=
 API_KEY=
 SERVER=
@@ -223,7 +223,7 @@ do
 			if [ -z "$NOOP" ]
 			then
 				cd "$reponame"
-				head=$(cut -f1 .git/FETCH_HEAD) || head=""
+				head=$(cut -f1 .git/FETCH_HEAD 2>/dev/null) || head=""
 			fi
 			run "git fetch origin" "$reponame" || break
 			run "git reset --hard origin/master" "$reponame" || break
@@ -239,7 +239,6 @@ do
 			if [ -z "$NOOP" ]
 			then
 				cd "$reponame"
-				nhead=$(cut -f1 .git/FETCH_HEAD) || nhead=""
 			fi
 		fi
 
@@ -255,20 +254,6 @@ do
 		fi
 
 		TIME_env=$(date +%s)
-
-		# Optional dependencies in repo's minci.cfg.
-		# I'm not using this yet.
-
-		if [ -r "minci.cfg" ]
-		then
-			while read -r mln
-			do
-				deplib="$(echo $ln | sed -n 's!^[ ]*deplib[ ]*=[ ]*!!p')"
-				[ -n "$deplib" ] || continue
-				run "pkg-config --exists $deplib" "$reponame" || break
-			done < "minci.cfg"
-			[ -n "$mln" ] || break
-		fi
 
 		run "./configure PREFIX=build" "$reponame" || break
 		TIME_depend=$(date +%s)
