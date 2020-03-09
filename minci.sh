@@ -6,6 +6,7 @@
 
 MAKE="make"
 API_SECRET=
+DEP_BINS="mandoc pkg-config openssl git curl"
 NOOP=
 API_KEY=
 SERVER=
@@ -61,6 +62,8 @@ do
 	MAKE="$bsdmake"
 done < "$CONFIG"
 
+DEP_BINS="$DEP_BINS $MAKE"
+
 # Read the API secret from the configuration.
 
 while read -r ln
@@ -106,6 +109,17 @@ fi
 echo "$0: using API key: $API_KEY"
 echo "$0: using API secret: $API_SECRET"
 echo "$0: using server: $SERVER"
+
+for dep in $DEP_BINS
+do
+	echo "$0: check binary dependency: $dep"
+	which "$dep" 2>/dev/null 1>&2
+	if [ $? -ne 0 ]
+	then
+		echo "$0: binary dep not in PATH: $dep" 1>&2
+		exit 1
+	fi
+done
 
 # Check or create where we'll put our repositories.
 
