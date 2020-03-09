@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # Usage:
-# minci.sh [-n] [repo...]
+# minci.sh [-fn] [repo...]
 # Use ~/.minci or /etc/minci for configuration, whichever comes first.
 
 MAKE="make"
@@ -15,6 +15,7 @@ CONFIG=
 CONFIG_LOCAL="$HOME/.minci"
 CONFIG_GLOBAL="/etc/minci"
 PROGNAME="$0"
+FORCE=
 
 run()
 {
@@ -27,10 +28,10 @@ run()
 	return 0
 }
 
-args=$(getopt n $*)
+args=$(getopt fn $*)
 if [ $? -ne 0 ]
 then
-	echo "usage: $0 [-n] [repo ...]" 1>&2
+	echo "usage: $0 [-fn] [repo ...]" 1>&2
 	exit 1
 fi
 
@@ -42,6 +43,8 @@ do
 	in
 		-n)
 			NOOP=1 ; shift ;;
+		-f)
+			FORCE=1 ; shift ;;
 		--)
 			shift ; break ;;
         esac
@@ -213,6 +216,7 @@ do
 
 		# If we have a repository already, update and clean it
 		# out; otherwise, clone it afresh.
+		# Keep track of the FETCH_HEAD last commit.
 
 		if [ -d "$reponame" ]
 		then
@@ -239,7 +243,11 @@ do
 			fi
 		fi
 
-		if [ -n "$head" -a -n "$nhead" -a "$head" = "$nhead" ]
+		# If the FETCH_HEAD commit doesn't change when we freshen the
+		# repository, then doing re-test it unless -f was passed.
+
+		if [ -z "$FORCE" -a -n "$head" -a \
+		     -n "$nhead" -a "$head" = "$nhead" ]
 		then
 			echo "$0: repository is fresh: $reponame"
 			TIME_start=0
