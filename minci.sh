@@ -6,12 +6,33 @@
 
 MAKE="make"
 API_SECRET=
+NOOP=
 API_KEY=
 SERVER=
 STAGING="$HOME/.local/cache/minci"
 CONFIG=
 CONFIG_LOCAL="$HOME/.minci"
 CONFIG_GLOBAL="/etc/minci"
+
+args=$(getopt n $*)
+if [ $? -ne 0 ]
+then
+	echo "usage: $0 [-n] [repo ...]" 1>&2
+	exit 1
+fi
+
+set -- $args
+
+while [ $# -ne 0 ]
+do
+	case "$1"
+	in
+		-n)
+			NOOP=1 ; shift ;;
+		--)
+			shift ; break ;;
+        esac
+done
 
 # Start with the local then global configuration.
 # Require at least one of them.
@@ -88,7 +109,7 @@ echo "$0: using server: $SERVER"
 
 # Check or create where we'll put our repositories.
 
-if [ ! -d "$STAGING" ]
+if [ ! -d "$STAGING" -a -z "$NOOP" ]
 then
 	mkdir -p "$STAGING"
 	if [ $? -ne 0 ]
@@ -139,7 +160,10 @@ do
 	echo "$0: processing repo: $reponame"
 	echo "$0: ...parsed from: $repo"
 
-	cd "$STAGING"
+	if [ -z "$NOOP" ]
+	then
+		cd "$STAGING"
+	fi
 
 	# Set all of our times to zero.
 	# If a time is non-zero when we send our ping, that means that
@@ -156,31 +180,49 @@ do
 	# This is wrapped in an infinite loop so we can just use `break`
 	# to come out of error situations.
 
-	exec 3>/tmp/minci.log
+	if [ -z "$NOOP" ]
+	then
+		exec 3>/tmp/minci.log
+	fi
 	TIME_start=`date +%s`
 
 	while `true`
 	do
 		if [ -d "$reponame" ]
 		then
-			cd "$reponame"
+			if [ -z "$NOOP" ]
+			then
+				cd "$reponame"
+			fi
 
 			echo "$0: git fetch origin: $reponame"
-			echo "$0: git fetch origin: $reponame" 1>&3
-			git fetch origin 1>&3 2>&3 || break
+			if [ -z "$NOOP" ]
+			then
+				echo "$0: git fetch origin: $reponame" 1>&3
+				git fetch origin 1>&3 2>&3 || break
+			fi
 
 			echo "$0: git reset --hard origin/master: $reponame"
-			echo "$0: git reset --hard origin/master: $reponame" 1>&3
-			git reset --hard origin/master 1>&3 2>&3 || break
+			if [ -z "$NOOP" ]
+			then
+				echo "$0: git reset --hard origin/master: $reponame" 1>&3
+				git reset --hard origin/master 1>&3 2>&3 || break
+			fi
 
 			echo "$0: git clean -fdx: $reponame"
-			echo "$0: git clean -fdx: $reponame" 1>&3
-			git clean -fdx 1>&3 2>&3 || break
+			if [ -z "$NOOP" ]
+			then
+				echo "$0: git clean -fdx: $reponame" 1>&3
+				git clean -fdx 1>&3 2>&3 || break
+			fi
 		else
 			echo "$0: git clone $repo $reponame"
-			echo "$0: git clone $repo $reponame" 1>&3
-			git clone "$repo" "$reponame" 1>&3 2>&3 || break
-			cd "$reponame"
+			if [ -z "$NOOP" ]
+			then
+				echo "$0: git clone $repo $reponame" 1>&3
+				git clone "$repo" "$reponame" 1>&3 2>&3 || break
+				cd "$reponame"
+			fi
 		fi
 		TIME_env=`date +%s`
 
@@ -188,44 +230,65 @@ do
 		then
 			while read mln
 			do
-				dep="$(echo $ln | sed -n 's!^[ ]*dep[ ]*=[ ]*!!p')"
-				[ -n "$dep" ] || continue
+				deplib="$(echo $ln | sed -n 's!^[ ]*deplib[ ]*=[ ]*!!p')"
+				[ -n "$deplib" ] || continue
 
-				echo "$0: pkg-config --exists $dep: $reponame"
-				echo "$0: pkg-config --exists $dep: $reponame" 1>&3
-				pkg-config --exists "$dep" 1>&3 2>&3 || break
+				echo "$0: pkg-config --exists $deplib: $reponame"
+				if [ -z "$NOOP" ]
+				then
+					echo "$0: pkg-config --exists $deplib: $reponame" 1>&3
+					pkg-config --exists "$deplib" 1>&3 2>&3 || break
+				fi
 			done < "minci.cfg"
 			[ -n "$mln" ] || break
 		fi
 		TIME_depend=`date +%s`
 
 		echo "$0: ./configure PREFIX=build: $reponame"
-		echo "$0: ./configure PREFIX=build: $reponame" 1>&3
-		./configure PREFIX=build 1>&3 2>&3 || break
+		if [ -z "$NOOP" ]
+		then
+			echo "$0: ./configure PREFIX=build: $reponame" 1>&3
+			./configure PREFIX=build 1>&3 2>&3 || break
+		fi
 
 		echo "$0: ${MAKE}: $reponame"
-		echo "$0: ${MAKE}: $reponame" 1>&3
-		${MAKE} 1>&3 2>&3 || break
+		if [ -z "$NOOP" ]
+		then
+			echo "$0: ${MAKE}: $reponame" 1>&3
+			${MAKE} 1>&3 2>&3 || break
+		fi
 		TIME_build=`date +%s`
 
 		echo "$0: ${MAKE} regress: $reponame"
-		echo "$0: ${MAKE} regress: $reponame" 1>&3
-		${MAKE} regress 1>&3 2>&3 || break
+		if [ -z "$NOOP" ]
+		then
+			echo "$0: ${MAKE} regress: $reponame" 1>&3
+			${MAKE} regress 1>&3 2>&3 || break
+		fi
 		TIME_test=`date +%s`
 
 		echo "$0: ${MAKE} install: $reponame"
-		echo "$0: ${MAKE} install: $reponame" 1>&3
-		${MAKE} install 1>&3 2>&3 || break
+		if [ -z "$NOOP" ]
+		then
+			echo "$0: ${MAKE} install: $reponame" 1>&3
+			${MAKE} install 1>&3 2>&3 || break
+		fi
 		TIME_install=`date +%s`
 
 		echo "$0: ${MAKE} distcheck: $reponame"
-		echo "$0: ${MAKE} distcheck: $reponame" 1>&3
-		${MAKE} distcheck 1>&3 2>&3 || break
+		if [ -z "$NOOP" ]
+		then
+			echo "$0: ${MAKE} distcheck: $reponame" 1>&3
+			${MAKE} distcheck 1>&3 2>&3 || break
+		fi
 		TIME_distcheck=`date +%s`
 		break
 	done
 
-	exec 3>&-
+	if [ -z "$NOOP" ]
+	then
+		exec 3>&-
+	fi
 	set +e
 
 	if [ $TIME_distcheck -eq 0 ]
@@ -284,25 +347,28 @@ do
 	else
 		REPORT_LOG="-F report-log="
 	fi
-	curl -sS ${REPORT_LOG} \
-	     -F "project-name=${reponame}" \
-	     -F "report-start=${TIME_start}" \
-	     -F "report-env=${TIME_env}" \
-	     -F "report-depend=${TIME_depend}" \
-	     -F "report-build=${TIME_build}" \
-	     -F "report-test=${TIME_test}" \
-	     -F "report-install=${TIME_install}" \
-	     -F "report-distcheck=${TIME_distcheck}" \
-	     -F "report-unamem=${UNAME_M}" \
-	     -F "report-unamen=${UNAME_N}" \
-	     -F "report-unamer=${UNAME_R}" \
-	     -F "report-unames=${UNAME_S}" \
-	     -F "report-unamev=${UNAME_V}" \
-	     -F "user-apikey=${API_KEY}" \
-	     -F "signature=${SIGNATURE}" \
-	     "${SERVER}"
 
-	rm -f /tmp/minci.log
+	if [ -z "$NOOP" ]
+	then
+		curl -sS ${REPORT_LOG} \
+		     -F "project-name=${reponame}" \
+		     -F "report-start=${TIME_start}" \
+		     -F "report-env=${TIME_env}" \
+		     -F "report-depend=${TIME_depend}" \
+		     -F "report-build=${TIME_build}" \
+		     -F "report-test=${TIME_test}" \
+		     -F "report-install=${TIME_install}" \
+		     -F "report-distcheck=${TIME_distcheck}" \
+		     -F "report-unamem=${UNAME_M}" \
+		     -F "report-unamen=${UNAME_N}" \
+		     -F "report-unamer=${UNAME_R}" \
+		     -F "report-unames=${UNAME_S}" \
+		     -F "report-unamev=${UNAME_V}" \
+		     -F "user-apikey=${API_KEY}" \
+		     -F "signature=${SIGNATURE}" \
+		     "${SERVER}"
+		rm -f /tmp/minci.log
+	fi
 done < "$CONFIG"
 
 exit 0
