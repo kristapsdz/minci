@@ -54,18 +54,18 @@ echo "$0: using config: $CONFIG"
 
 # Read the API secret from the configuration.
 
-while read ln
+while read -r ln
 do
-	bsdmake="$(echo $ln | sed -n 's!^[ ]*bsdmake[ ]*=[ ]*!!p')"
+	bsdmake="$(echo "$ln" | sed -n 's!^[ ]*bsdmake[ ]*=[ ]*!!p')"
 	[ -z "$bsdmake" ] && continue
 	MAKE="$bsdmake"
 done < "$CONFIG"
 
 # Read the API secret from the configuration.
 
-while read ln
+while read -r ln
 do
-	api_secret="$(echo $ln | sed -n 's!^[ ]*apisecret[ ]*=[ ]*!!p')"
+	api_secret="$(echo "$ln" | sed -n 's!^[ ]*apisecret[ ]*=[ ]*!!p')"
 	[ -z "$api_secret" ] && continue
 	API_SECRET="$api_secret"
 done < "$CONFIG"
@@ -77,9 +77,9 @@ fi
 
 # Read the API key from the configuration.
 
-while read ln
+while read -r ln
 do
-	api_key="$(echo $ln | sed -n 's!^[ ]*apikey[ ]*=[ ]*!!p')"
+	api_key="$(echo "$ln" | sed -n 's!^[ ]*apikey[ ]*=[ ]*!!p')"
 	[ -z "$api_key" ] && continue
 	API_KEY="$api_key"
 done < "$CONFIG"
@@ -91,9 +91,9 @@ fi
 
 # Read the server from the configuration.
 
-while read ln
+while read -r ln
 do
-	server="$(echo $ln | sed -n 's!^[ ]*server[ ]*=[ ]*!!p')"
+	server="$(echo "$ln" | sed -n 's!^[ ]*server[ ]*=[ ]*!!p')"
 	[ -z "$server" ] && continue
 	SERVER="$server"
 done < "$CONFIG"
@@ -122,7 +122,7 @@ fi
 
 # Process each repository line.
 
-while read ln
+while read -r ln
 do
 	repo="$(echo $ln | sed -n 's!^[ ]*repo[ ]*=[ ]*!!p')"
 	[ -z "$repo" ] && continue
@@ -138,7 +138,7 @@ do
 
 	if [ $# -gt 0 ]
 	then
-		for prog in $@
+		for prog in "$@"
 		do
 			if [ "$prog" = "$reponame" ]
 			then
@@ -184,9 +184,9 @@ do
 	then
 		exec 3>/tmp/minci.log
 	fi
-	TIME_start=`date +%s`
+	TIME_start=$(date +%s)
 
-	while `true`
+	while :
 	do
 		if [ -d "$reponame" ]
 		then
@@ -224,11 +224,11 @@ do
 				cd "$reponame"
 			fi
 		fi
-		TIME_env=`date +%s`
+		TIME_env=$(date +%s)
 
 		if [ -r "minci.cfg" ]
 		then
-			while read mln
+			while read -r mln
 			do
 				deplib="$(echo $ln | sed -n 's!^[ ]*deplib[ ]*=[ ]*!!p')"
 				[ -n "$deplib" ] || continue
@@ -242,7 +242,7 @@ do
 			done < "minci.cfg"
 			[ -n "$mln" ] || break
 		fi
-		TIME_depend=`date +%s`
+		TIME_depend=$(date +%s)
 
 		echo "$0: ./configure PREFIX=build: $reponame"
 		if [ -z "$NOOP" ]
@@ -257,7 +257,7 @@ do
 			echo "$0: ${MAKE}: $reponame" 1>&3
 			${MAKE} 1>&3 2>&3 || break
 		fi
-		TIME_build=`date +%s`
+		TIME_build=$(date +%s)
 
 		echo "$0: ${MAKE} regress: $reponame"
 		if [ -z "$NOOP" ]
@@ -265,7 +265,7 @@ do
 			echo "$0: ${MAKE} regress: $reponame" 1>&3
 			${MAKE} regress 1>&3 2>&3 || break
 		fi
-		TIME_test=`date +%s`
+		TIME_test=$(date +%s)
 
 		echo "$0: ${MAKE} install: $reponame"
 		if [ -z "$NOOP" ]
@@ -273,7 +273,7 @@ do
 			echo "$0: ${MAKE} install: $reponame" 1>&3
 			${MAKE} install 1>&3 2>&3 || break
 		fi
-		TIME_install=`date +%s`
+		TIME_install=$(date +%s)
 
 		echo "$0: ${MAKE} distcheck: $reponame"
 		if [ -z "$NOOP" ]
@@ -281,7 +281,7 @@ do
 			echo "$0: ${MAKE} distcheck: $reponame" 1>&3
 			${MAKE} distcheck 1>&3 2>&3 || break
 		fi
-		TIME_distcheck=`date +%s`
+		TIME_distcheck=$(date +%s)
 		break
 	done
 
@@ -300,11 +300,11 @@ do
 
 	echo "$0: computing signature"
 
-	UNAME_M=`uname -m | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
-	UNAME_N=`uname -n | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
-	UNAME_R=`uname -r | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
-	UNAME_S=`uname -s | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
-	UNAME_V=`uname -v | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g'`
+	UNAME_M=$(uname -m | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g')
+	UNAME_N=$(uname -n | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g')
+	UNAME_R=$(uname -r | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g')
+	UNAME_S=$(uname -s | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g')
+	UNAME_V=$(uname -v | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g')
 
 	# Create the signature for this entry.
 	# It consists of all the MD5 hash of all arguments in
@@ -319,9 +319,9 @@ do
 	QUERY="${QUERY}&report-install=${TIME_install}"
 	if [ $TIME_distcheck -eq 0 ]
 	then
-		QUERY="${QUERY}&report-log=`openssl dgst -md5 -hex /tmp/minci.log | sed 's!^[^=]*= !!'`"
+		QUERY="${QUERY}&report-log=$(openssl dgst -md5 -hex /tmp/minci.log | sed 's!^[^=]*= !!')"
 	else
-		QUERY="${QUERY}&report-log=`openssl dgst -md5 -hex /dev/null | sed 's!^[^=]*= !!'`"
+		QUERY="${QUERY}&report-log=$(openssl dgst -md5 -hex /dev/null | sed 's!^[^=]*= !!')"
 	fi
 	QUERY="${QUERY}&report-start=${TIME_start}"
 	QUERY="${QUERY}&report-test=${TIME_test}"
@@ -332,7 +332,7 @@ do
 	QUERY="${QUERY}&report-unamev=${UNAME_V}"
 	QUERY="${QUERY}&user-apisecret=${API_SECRET}"
 
-	SIGNATURE=`printf "%s" "$QUERY" | openssl dgst -md5 -hex | sed 's!^[^=]*= !!'`
+	SIGNATURE=$(printf "%s" "$QUERY" | openssl dgst -md5 -hex | sed 's!^[^=]*= !!')
 
 	# Now actually send the report.
 	# It includes the signature and optionally the build log (only
