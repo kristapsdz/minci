@@ -1,11 +1,20 @@
 html, body				{ margin: 0; }
 body					{ font-family: sans-serif; }
-.table					{ width: 100%; }
+.table					{ width: 100%; 
+					  max-width: 88rem;
+					  margin-right: auto;
+					  margin-left: auto; }
+h1					{ font-size: larger;
+					  text-align: center; }
+h1 a, h1 span				{ display: inline-block; }
+h1 a					{ margin-right: 0.3rem; }
+h1 span					{ margin-left: 0.3rem; }
 .singleton				{ width: calc(100% - 1rem);
 					  max-width: 66rem;
-					  margin: 1rem auto; }
-.table > :nth-child(odd)		{ background-color: #f0f0f0; }
-.table > :first-child			{ display: none;
+					  margin-right: auto;
+					  margin-left: auto; }
+div.table > :nth-child(odd)		{ background-color: #f0f0f0; }
+div.table > :first-child			{ display: none;
 					  background-color: #666;
 					  font-weight: bold;
 					  text-shadow: 0 0 #000;
@@ -83,9 +92,8 @@ body					{ font-family: sans-serif; }
 
 @media (min-width: 80rem) {
   html, body				{ margin: 1rem 0; }
-  .table				{ max-width: 88rem;
-					  margin: 0 auto; }
-  .table > :first-child,
+  h1					{ text-align: left; }
+  div.table > :first-child,
   .row					{ display: flex; }
   .head, .cell				{ width: 4rem;
 					  padding: 0 1rem; }

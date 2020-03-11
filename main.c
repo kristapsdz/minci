@@ -307,6 +307,22 @@ get_single_html(struct kreq *r, const struct report *p)
 	khtml_open(&req, r, 0);
 	html_open(&req, "Minimal CI Report");
 
+	/* Heading. */
+
+	khtml_attr(&req, KELEM_H1,
+		KATTR_CLASS, "singleton", KATTR__MAX);
+	khtml_attr(&req, KELEM_A, 
+		KATTR_HREF, "index.html", KATTR__MAX);
+	khtml_puts(&req, "CI Dashboard");
+	khtml_closeelem(&req, 1); /* a */
+	khtml_ncr(&req, 0x203a);
+	khtml_elem(&req, KELEM_SPAN);
+	khtml_puts(&req, "Reports");
+	khtml_closeelem(&req, 1); /* span */
+	khtml_closeelem(&req, 1); /* h1 */
+
+	/* Body. */
+
 	khtml_attr(&req, KELEM_DIV,
 		KATTR_CLASS, "singleton", KATTR__MAX);
 	khtml_attr(&req, KELEM_DIV, KATTR_CLASS, 
@@ -469,6 +485,35 @@ get_last(struct kreq *r)
 
 	khtml_open(&req.html, r, 0);
 	html_open(&req.html, "Recent Minimal CI Reports");
+
+	khtml_attr(&req.html, KELEM_H1, 
+		KATTR_CLASS, "table", KATTR__MAX);
+
+	if (kpn != NULL) {
+		khtml_attr(&req.html, KELEM_A,
+			KATTR_HREF, "index.html", KATTR__MAX);
+		khtml_puts(&req.html, "CI Dashboard");
+		khtml_closeelem(&req.html, 1); /* a */
+		khtml_ncr(&req.html, 0x203a);
+		khtml_elem(&req.html, KELEM_SPAN);
+		khtml_puts(&req.html, "Project Reports");
+		khtml_closeelem(&req.html, 1); /* span */
+		khtml_closeelem(&req.html, 1); /* h1 */
+	} else if (kpd != NULL) {
+		khtml_attr(&req.html, KELEM_A,
+			KATTR_HREF, "index.html", KATTR__MAX);
+		khtml_puts(&req.html, "CI Dashboard");
+		khtml_closeelem(&req.html, 1); /* a */
+		khtml_ncr(&req.html, 0x203a);
+		khtml_elem(&req.html, KELEM_SPAN);
+		khtml_puts(&req.html, "Date Reports");
+		khtml_closeelem(&req.html, 1); /* span */
+		khtml_closeelem(&req.html, 1); /* h1 */
+	} else
+		khtml_puts(&req.html, "CI Dashboard");
+
+	khtml_closeelem(&req.html, 1); /* h1 */
+
 	khtml_attr(&req.html, KELEM_DIV, 
 		KATTR_CLASS, "table", KATTR__MAX);
 	get_html_last_header(&req.html);
