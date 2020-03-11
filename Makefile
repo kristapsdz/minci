@@ -22,6 +22,13 @@ update: all
 	install -o www -m 0444 minci.css $(PREFIX)/htdocs
 	install -o www -m 0500 minci.cgi $(PREFIX)/cgi-bin
 
+updatedb:
+	mkdir -p $(PREFIX)/data
+	cp -f $(PREFIX)/data/minci.db $(PREFIX)/data/minci.db.old
+	cp -f $(PREFIX)/data/minci.ort $(PREFIX)/data/minci.ort.old
+	ort-sqldiff $(PREFIX)/data/minci.ort db.ort | sqlite3 $(PREFIX)/data/minci.db
+	install -m 0400 db.ort $(PREFIX)/data/minci.ort
+
 minci.cgi: $(OBJS) minci.db
 	$(CC) -o $@ -static $(OBJS) `pkg-config --libs --static kcgi-html sqlbox`
 
