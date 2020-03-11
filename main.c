@@ -483,7 +483,7 @@ get_last(struct kreq *r)
 			kpd->parsed.i, /* ctime ge */
 			kpd->parsed.i + 86400); /* ctime le */
 	else
-		db_report_iterate_last(r->arg, 
+		db_report_iterate_dash(r->arg, 
 			get_html_last_report, &req);
 
 	khtml_closeelem(&req.html, 1); /* table */
@@ -525,6 +525,7 @@ post(struct kreq *r)
 	MD5_CTX		 ctx;
 	char		*buf = NULL;
 	char		 digest[MD5_DIGEST_STRING_LENGTH],
+			 unamedigest[MD5_DIGEST_STRING_LENGTH],
 			 logdigest[MD5_DIGEST_STRING_LENGTH];
 
 	/* 
@@ -676,12 +677,23 @@ post(struct kreq *r)
 	MD5Init(&ctx);
 	MD5Update(&ctx, buf, sz);
 	MD5End(&ctx, digest);
+	free(buf);
+	buf = NULL;
 
 	if (strcasecmp(digest, sig->parsed.s)) {
 		kutil_warnx(r, NULL, "bad signature");
 		http_open(r, KHTTP_403, KMIME__MAX);
 		goto out;
 	}
+
+	sz = (size_t)kasprintf(&buf, 
+		"%" PRId64 "|%s|%s|%s|%s|%s",
+		proj->id, kpum->parsed.s, 
+		kpun->parsed.s, kpur->parsed.s, 
+		kpus->parsed.s, kpuv->parsed.s);
+	MD5Init(&ctx);
+	MD5Update(&ctx, buf, sz);
+	MD5End(&ctx, unamedigest);
 
 	/* Insert the record. */
 
@@ -701,7 +713,8 @@ post(struct kreq *r)
 		kpun->parsed.s, /* unamen */
 		kpur->parsed.s, /* unamer */
 		kpus->parsed.s, /* unames */
-		kpuv->parsed.s); /* unamev */
+		kpuv->parsed.s, /* unamev */
+		unamedigest); /* unamehash */
 
 	kutil_info(r, user->email, "log submitted: %s", proj->name);
 	http_open(r, KHTTP_201, KMIME__MAX);

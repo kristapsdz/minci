@@ -65,7 +65,7 @@ struct report {
 	field env epoch
 		comment "When the repository has been cloned/updated (ge
 			 start or zero on failure.";
-	field depend epoch;
+	field depend epoch
 		comment "When dependencies have been checked (ge env or
 			 equal or zero on failure or env failure).";
 	field build epoch
@@ -97,18 +97,23 @@ struct report {
 		comment "Output of uname -s.";
 	field unamev text limit le 128
 		comment "Output of uname -v.";
+	field unamehash text limit eq 32
+		comment "Hash of uname[mnrsv].  This is used to quickly
+			 establish a kind of machine identity.";
+
 	field id int rowid;
 
 	insert;
 
-	iterate: limit 50 name last order ctime desc;
 	iterate project.name: limit 50 name lastname order ctime desc;
 	iterate ctime ge, ctime le: limit 50 name lastdate order ctime desc;
+
+	iterate: name dash order projectid,ctime desc grouprow unamehash maxrow ctime;
 
 	search id: name byid;
 
 	roles consumer {
-		iterate last;
+		iterate dash;
 		iterate lastdate;
 		iterate lastname;
 		noexport userid;
