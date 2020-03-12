@@ -1,10 +1,25 @@
 html, body				{ margin: 0; }
-body					{ font-family: sans-serif; }
+body					{ font-family: sans-serif;
+					  padding-top: 4rem;
+					  padding-bottom: 1rem;
+					  position: relative; }
+a					{ color: blue; }
+a:visited				{ color: rgb(100, 100, 255); }
+body > header				{ position: fixed;
+					  top: 0;
+					  left: 0;
+					  line-height: 2rem;
+					  background-color: #3d3d3d;
+					  z-index: 10;
+					  color: #ccc;
+					  width: 100%; }
+body > header a				{ color: #fff;
+					  text-decoration: none; }
 .table					{ width: 100%; 
 					  max-width: 88rem;
 					  margin-right: auto;
 					  margin-left: auto; }
-h1					{ font-size: larger;
+h1					{ font-size: inherit;
 					  text-align: center; }
 h1 a, h1 span				{ display: inline-block; }
 h1 a					{ margin-right: 0.3rem; }
@@ -14,7 +29,7 @@ h1 span					{ margin-left: 0.3rem; }
 					  margin-right: auto;
 					  margin-left: auto; }
 div.table > :nth-child(odd)		{ background-color: #f0f0f0; }
-div.table > :first-child			{ display: none;
+div.table > :first-child		{ display: none;
 					  background-color: #666;
 					  font-weight: bold;
 					  text-shadow: 0 0 #000;
@@ -91,7 +106,6 @@ div.table > :first-child			{ display: none;
 .report-log-link::before		{ content: 'Full log.'; }
 
 @media (min-width: 80rem) {
-  html, body				{ margin: 1rem 0; }
   h1					{ text-align: left; }
   div.table > :first-child,
   .row					{ display: flex; }
@@ -110,19 +124,31 @@ div.table > :first-child			{ display: none;
   .cell.report-regress::before,
   .cell.report-install::before,
   .cell.report-dist::before,
-  .cell.report-system::before	{ content: none;
-	  			  padding: 0; }
+  .cell.report-system::before		{ content: none;
+					  padding: 0; }
   .cell.report-start::after,
-  .cell.report-id::after	{ content: none;
-	  			  margin-right: 0; }
-  .head.project-name::before	{ content: 'project'; }
-  .head.report-start::before	{ content: 'date'; }
-  .head.report-env::before	{ content: 'env'; }
-  .head.report-deps::before	{ content: 'deps'; }
-  .head.report-build::before	{ content: 'build'; }
-  .head.report-regress::before	{ content: 'test'; }
-  .head.report-install::before	{ content: 'install'; }
-  .head.report-dist::before	{ content: 'check'; }
+  .cell.report-id::after		{ content: none;
+					  margin-right: 0; }
+  .head.project-name::before		{ content: 'project'; }
+  .head.report-start::before		{ content: 'date'; }
+  .head.report-env::before		{ content: 'env'; }
+  .head.report-deps::before		{ content: 'deps'; }
+  .head.report-build::before		{ content: 'build'; }
+  .head.report-regress::before		{ content: 'test'; }
+  .head.report-install::before		{ content: 'install'; }
+  .head.report-dist::before		{ content: 'check'; }
   .head.report-system-ext::before,
-  .head.report-system::before	{ content: 'system'; }
+  .head.report-system::before		{ content: 'system'; }
+}
+
+@media (prefers-color-scheme: dark) {
+  body					{ background-color: #4d4d4d;
+					  color: #eee; }
+  div.table > :nth-child(odd)		{ background-color: #6d6d6d; }
+  a					{ color: yellow; }
+  a:visited				{ color: rgb(255, 255, 180); }
+  .report-success::before		{ color: rgb(50, 255, 50); }
+  .report-failure::before,
+  .cellgroup .cell span::after		{ color: rgb(255, 50, 50); }
+  .report-log				{ background-color: #000; }
 }
