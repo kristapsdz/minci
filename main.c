@@ -95,6 +95,9 @@ html_open(struct khtmlreq *req, const char *title)
 		KATTR_NAME, "viewport",
 		KATTR_CONTENT, "width=device-width, initial-scale=1",
 		KATTR__MAX);
+	khtml_attr(req, KELEM_META, 
+		KATTR_CHARSET, "utf-8",
+		KATTR__MAX);
 	khtml_attrx(req, KELEM_LINK, 
 		KATTR_REL, KATTRX_STRING, "stylesheet",
 		KATTR_HREF, KATTRX_STRING, "/minci.css",
@@ -490,28 +493,6 @@ get_last(struct kreq *r, time_t mtime)
 {
 	struct req	 req;
 	struct kpair	*kpn, *kpd;
-	char		*cp;
-	struct tm	 tm;
-	time_t		 cmptime;
-
-	/*
-	 * If the client is coming in with a If-Modified-Since, see if the
-	 * timestamp on our database file has changed.
-	 * For our application, this works: it's an append-only record.
-	 */
-
-	if (r->reqmap[KREQU_IF_MODIFIED_SINCE] != NULL) {
-		memset(&tm, 0, sizeof(struct tm));
-		cp = strptime
-			(r->reqmap[KREQU_IF_MODIFIED_SINCE]->val,
-			 "%a, %d %b %Y %T GMT", &tm);
-		if (cp != NULL && 
-		    (cmptime = mktime(&tm)) != -1 &&
-		    mtime <= cmptime) {
-			http_open(r, KHTTP_304, r->mime, 0);
-			return;
-		}
-	}
 
 	/* Both of these are optional. */
 
@@ -826,6 +807,9 @@ main(void)
 	struct kreq	 r;
 	enum kcgi_err	 er;
 	struct stat	 st;
+	struct tm	 tm;
+	char		*cp;
+	time_t		 t;
 
 	/* Basic checks: parse and valid page. */
 
@@ -854,6 +838,21 @@ main(void)
 		kutil_err(&r, NULL, DATADIR "/minci.db");
 		khttp_free(&r);
 		return EXIT_FAILURE;
+	}
+
+	if (r.method == KMETHOD_GET &&
+	    r.reqmap[KREQU_IF_MODIFIED_SINCE] != NULL) {
+		memset(&tm, 0, sizeof(struct tm));
+		cp = strptime
+			(r.reqmap[KREQU_IF_MODIFIED_SINCE]->val,
+			 "%a, %d %b %Y %T GMT", &tm);
+		if (cp != NULL && 
+		    (t = mktime(&tm)) != -1 &&
+		    st.st_mtime <= t) {
+			http_open(&r, KHTTP_304, r.mime, 0);
+			khttp_free(&r);
+			return EXIT_SUCCESS;
+		}
 	}
 
 	/* Open the database. */
