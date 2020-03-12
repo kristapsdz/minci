@@ -3,20 +3,25 @@
 This is a minimal CI ("continuous integration") system used by BSD.lv
 projects.
 It uses a shell script as the test runner and a
-[BCHS](https://learnbchs.org) back-end server for recording results.
-The server is assumed to run on a [OpenBSD](https://www.openbsd.org) system.
+[BCHS](https://learnbchs.org) back-end server for recording and
+displaying results.
+The server is assumed to run on a [OpenBSD](https://www.openbsd.org)
+system, although it's trivially portable.
 
 The CI test runner performs the following:
 
 1. clone or freshen a project's git repository
-2. configure the software (all use [oconfigure](https://github.com/kristapsdz/oconfigure))
+2. configure the software (all use
+   [oconfigure](https://github.com/kristapsdz/oconfigure))
 3. build
 4. run tests
 5. fake install
-6. distribution check (runs build, tests, install on distributed archive)
+6. distribution check (runs build, tests, install on distributed
+   archive)
 
 The results of this sequence (failure is implied if the last step isn't
 reached) are sent to the CI report server.
+CI reports may also be viewed on the server over a web interface.
 
 Tested projects are simply identified by name.  There is currently no
 way to verify that project results are actually from a project.
@@ -135,3 +140,22 @@ message (in a well-defined order) with the user's secret API key.  The server,
 which also has the secret key, hashes the message contents as well and compares
 the signature.  If the signature matches, the report is authentic.
 
+To further prevent tampering, **minci** uses the role-based access
+control of [openradtool](https://kristaps.bsd.lv/openradtool) to wall
+off producers (those generating reports) with consumers (those viewing
+them).
+
+# Report viewing
+
+**minci** has a built-in web interface at the same address used for
+posting reports.
+
+It features a dashboard "index" view showing the most recent reports
+grouped by project and generating machine.  This gives a quick look at
+what systems currently work and don't work.
+
+It also allows for browsing by project, date, or seeing the individaul
+report log, including full failure logs.
+
+The interface supports HTTP caching, compression, and the styling is
+responsive and includes a night mode.
