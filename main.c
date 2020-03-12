@@ -14,6 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <sys/stat.h>
 #include <sys/types.h>
 
 #include <assert.h>
@@ -50,24 +51,35 @@ static const char *const pages[PAGE__MAX] = {
 	"index", /* PAGE_INDEX */
 };
 
+/*
+ * Open our HTTP document by emitting all headers.
+ * If mime isn't KMIME__MAX, use its content type.
+ * If last is non-zero, use it as the last-modified time.
+ */
 static void
-http_open(struct kreq *r, enum khttp code, enum kmime mime)
+http_open(struct kreq *r,
+	enum khttp code, enum kmime mime, time_t last)
 {
+	char	datebuf[32];
 
-	khttp_head(r, kresps[KRESP_STATUS], 
-		"%s", khttps[code]);
-	khttp_head(r, kresps[KRESP_CACHE_CONTROL], 
-		"%s", "no-cache, no-store, must-revalidate");
-	khttp_head(r, kresps[KRESP_PRAGMA], 
-		"%s", "no-cache");
-	khttp_head(r, kresps[KRESP_EXPIRES], 
-		"%s", "0");
+	if (last)
+		kutil_epoch2str(last, datebuf, sizeof(datebuf));
+
+	khttp_head(r, kresps[KRESP_STATUS], "%s", khttps[code]);
 	if (mime != KMIME__MAX)
 		khttp_head(r, kresps[KRESP_CONTENT_TYPE], 
 			"%s", kmimetypes[mime]);
+	if (last)
+		khttp_head(r, kresps[KRESP_LAST_MODIFIED], 
+			"%s", datebuf);
 	khttp_body(r);
 }
 
+/*
+ * Open our HTML document with the correct document type, HTML envelope,
+ * and header element.
+ * This concludes with an open body envelope.
+ */
 static void
 html_open(struct khtmlreq *req, const char *title)
 {
@@ -309,6 +321,7 @@ get_single_html(struct kreq *r, const struct report *p)
 
 	/* Heading. */
 
+	khtml_elem(&req, KELEM_HEADER);
 	khtml_attr(&req, KELEM_H1,
 		KATTR_CLASS, "singleton", KATTR__MAX);
 	khtml_attr(&req, KELEM_A, 
@@ -320,6 +333,7 @@ get_single_html(struct kreq *r, const struct report *p)
 	khtml_puts(&req, "Reports");
 	khtml_closeelem(&req, 1); /* span */
 	khtml_closeelem(&req, 1); /* h1 */
+	khtml_closeelem(&req, 1); /* header */
 
 	/* Body. */
 
@@ -440,7 +454,7 @@ get_single_html(struct kreq *r, const struct report *p)
  * Outputs HTTP 404 (error) or 200 (success).
  */
 static void
-get_single(struct kreq *r)
+get_single(struct kreq *r, time_t mtime)
 {
 	struct report	*p;
 	struct kpair	*kp;
@@ -452,13 +466,13 @@ get_single(struct kreq *r)
 		kp->parsed.i); /* id */
 
 	if (p == NULL) {
-		http_open(r, KHTTP_404, KMIME__MAX);
+		http_open(r, KHTTP_404, KMIME__MAX, mtime);
 		return;
 	}
 
 	/* Emit either our log or the full HTML record. */
 
-	http_open(r, KHTTP_200, r->mime);
+	http_open(r, KHTTP_200, r->mime, mtime);
 	if (r->mime == KMIME_TEXT_PLAIN)
 		get_single_text(r, p);
 	else
@@ -472,20 +486,48 @@ get_single(struct kreq *r)
  * Always outputs HTTP 200.
  */
 static void
-get_last(struct kreq *r)
+get_last(struct kreq *r, time_t mtime)
 {
 	struct req	 req;
 	struct kpair	*kpn, *kpd;
+	char		*cp;
+	struct tm	 tm;
+	time_t		 cmptime;
+
+	/*
+	 * If the client is coming in with a If-Modified-Since, see if the
+	 * timestamp on our database file has changed.
+	 * For our application, this works: it's an append-only record.
+	 */
+
+	if (r->reqmap[KREQU_IF_MODIFIED_SINCE] != NULL) {
+		memset(&tm, 0, sizeof(struct tm));
+		cp = strptime
+			(r->reqmap[KREQU_IF_MODIFIED_SINCE]->val,
+			 "%a, %d %b %Y %T GMT", &tm);
+		if (cp != NULL && 
+		    (cmptime = mktime(&tm)) != -1 &&
+		    mtime <= cmptime) {
+			http_open(r, KHTTP_304, r->mime, 0);
+			return;
+		}
+	}
+
+	/* Both of these are optional. */
 
 	kpn = r->fieldmap[VALID_PROJECT_NAME];
 	kpd = r->fieldmap[VALID_REPORT_CTIME];
 
-	req.r = r;
-	http_open(r, KHTTP_200, r->mime);
+	/* Open output page. */
 
+	http_open(r, KHTTP_200, r->mime, mtime);
+	req.r = r;
 	khtml_open(&req.html, r, 0);
 	html_open(&req.html, "Recent Minimal CI Reports");
 
+	/* Output header. */
+
+	khtml_elem(&req.html, KELEM_HEADER);
 	khtml_attr(&req.html, KELEM_H1, 
 		KATTR_CLASS, "table", KATTR__MAX);
 
@@ -513,6 +555,9 @@ get_last(struct kreq *r)
 		khtml_puts(&req.html, "CI Dashboard");
 
 	khtml_closeelem(&req.html, 1); /* h1 */
+	khtml_closeelem(&req.html, 1); /* header */
+
+	/* Output data. */
 
 	khtml_attr(&req.html, KELEM_DIV, 
 		KATTR_CLASS, "table", KATTR__MAX);
@@ -538,16 +583,16 @@ get_last(struct kreq *r)
 }
 
 /*
- * List one or more records as text/html.
+ * List one or more records.
  */
 static void
-get(struct kreq *r)
+get(struct kreq *r, time_t mtime)
 {
 
 	if (r->fieldmap[VALID_REPORT_ID] != NULL)
-		get_single(r);
+		get_single(r, mtime);
 	else
-		get_last(r);
+		get_last(r, mtime);
 }
 
 /*
@@ -605,7 +650,7 @@ post(struct kreq *r)
 	    (kpuv = r->fieldmap[VALID_REPORT_UNAMEV]) == NULL ||
 	    (kpu = r->fieldmap[VALID_USER_APIKEY]) == NULL) {
 		kutil_warnx(r, NULL, "invalid request");
-		http_open(r, KHTTP_403, KMIME__MAX);
+		http_open(r, KHTTP_403, KMIME__MAX, 0);
 		goto out;
 	}
 
@@ -636,7 +681,7 @@ post(struct kreq *r)
 	     (kpc->parsed.i != 0)) ||
 	    (kpc->parsed.i != 0 && kpl->valsz)) {
 		kutil_warnx(r, NULL, "invalid stages");
-		http_open(r, KHTTP_403, KMIME__MAX);
+		http_open(r, KHTTP_403, KMIME__MAX, 0);
 		goto out;
 	}
 
@@ -654,7 +699,7 @@ post(struct kreq *r)
 	    (kpi->parsed.i != 0 && kpi->parsed.i < kpt->parsed.i) ||
 	    (kpc->parsed.i != 0 && kpc->parsed.i < kpi->parsed.i)) {
 		kutil_warnx(r, NULL, "invalid timestamp sequence");
-		http_open(r, KHTTP_403, KMIME__MAX);
+		http_open(r, KHTTP_403, KMIME__MAX, 0);
 		goto out;
 	}
 
@@ -670,7 +715,7 @@ post(struct kreq *r)
 		kpn->parsed.s); /* name */
 	if (proj == NULL) {
 		kutil_warnx(r, NULL, "invalid project");
-		http_open(r, KHTTP_403, KMIME__MAX);
+		http_open(r, KHTTP_403, KMIME__MAX, 0);
 		goto out;
 	}
 
@@ -678,7 +723,7 @@ post(struct kreq *r)
 		kpu->parsed.i); /* apikey */
 	if (user == NULL) {
 		kutil_warnx(r, NULL, "invalid user");
-		http_open(r, KHTTP_403, KMIME__MAX);
+		http_open(r, KHTTP_403, KMIME__MAX, 0);
 		goto out;
 	}
 
@@ -718,7 +763,6 @@ post(struct kreq *r)
 		kpus->parsed.s,
 		kpuv->parsed.s,
 		user->apisecret);
-
 	MD5Init(&ctx);
 	MD5Update(&ctx, buf, sz);
 	MD5End(&ctx, digest);
@@ -727,9 +771,16 @@ post(struct kreq *r)
 
 	if (strcasecmp(digest, sig->parsed.s)) {
 		kutil_warnx(r, NULL, "bad signature");
-		http_open(r, KHTTP_403, KMIME__MAX);
+		http_open(r, KHTTP_403, KMIME__MAX, 0);
 		goto out;
 	}
+
+	/* 
+	 * Lastly, hash the uname and project.
+	 * This is a tiny database optimisation so that our dashboard
+	 * grouping (holding unames and project id steady, get maximum
+	 * ctime) is a bit easier to manage.
+	 */
 
 	sz = (size_t)kasprintf(&buf, 
 		"%" PRId64 "|%s|%s|%s|%s|%s",
@@ -762,7 +813,7 @@ post(struct kreq *r)
 		unamedigest); /* unamehash */
 
 	kutil_info(r, user->email, "log submitted: %s", proj->name);
-	http_open(r, KHTTP_201, KMIME__MAX);
+	http_open(r, KHTTP_201, KMIME__MAX, 0);
 out:
 	db_project_free(proj);
 	db_user_free(user);
@@ -774,6 +825,7 @@ main(void)
 {
 	struct kreq	 r;
 	enum kcgi_err	 er;
+	struct stat	 st;
 
 	/* Basic checks: parse and valid page. */
 
@@ -785,17 +837,33 @@ main(void)
 			"khttp_parse: %s", kcgi_strerror(er));
 
 	if (r.page == PAGE__MAX) {
-		http_open(&r, KHTTP_404, KMIME__MAX);
+		http_open(&r, KHTTP_404, KMIME__MAX, 0);
 		khttp_free(&r);
 		return EXIT_SUCCESS;
 	}
+
+	/*
+	 * Get the last modified time of the database because we'll use
+	 * this to cache responses on the client side: if the db has
+	 * been updated, this time will jump.
+	 * Do this *before* opening the database to be conservative:
+	 * better to have extra 200s than erroneous 304s.
+	 */
+
+	if (stat(DATADIR "/minci.db", &st) == -1) {
+		kutil_err(&r, NULL, DATADIR "/minci.db");
+		khttp_free(&r);
+		return EXIT_FAILURE;
+	}
+
+	/* Open the database. */
 
 	if ((r.arg = db_open_logging
 	    (DATADIR "/minci.db", NULL, warnx, NULL)) == NULL) {
 		kutil_errx(&r, NULL, "db_open: %s", 
 			DATADIR "/minci.db");
 		khttp_free(&r);
-		return EXIT_SUCCESS;
+		return EXIT_FAILURE;
 	}
 
 	if (pledge("stdio", NULL) == -1) {
@@ -805,12 +873,14 @@ main(void)
 		return EXIT_FAILURE;
 	}
 
+	/* Switch on method, not resource. */
+
 	if (r.method == KMETHOD_POST) {
 		db_role(r.arg, ROLE_producer);
 		post(&r);
 	} else {
 		db_role(r.arg, ROLE_consumer);
-		get(&r);
+		get(&r, st.st_mtime);
 	}
 
 	db_close(r.arg);
