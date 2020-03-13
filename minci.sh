@@ -1,13 +1,15 @@
 #! /bin/sh
 
 # Usage:
-# minci.sh [-fn] [repo...]
+# minci.sh [-fnv] [repo...]
 # Use ~/.minci or /etc/minci for configuration, whichever comes first.
 
 MAKE="make"
 API_SECRET=
 DEP_BINS="mandoc openssl git curl"
 NOOP=
+LOG=
+VERBOSE=
 API_KEY=
 SERVER=
 STAGING="$HOME/.local/cache/minci"
@@ -17,9 +19,25 @@ CONFIG_GLOBAL="/etc/minci"
 PROGNAME="$0"
 FORCE=
 
+msg()
+{
+	echo "$PROGNAME: $(date +"%F %T"): $@"
+}
+
+fatal()
+{
+	echo "$PROGNAME: fatal: $@" 1>&2
+	exit 1
+}
+
+debug()
+{
+	[ -z "${VERBOSE}" ] || echo "$PROGNAME: $(date +"%F %T"): $@"
+}
+
 run()
 {
-	echo "$PROGNAME: $1: $2"
+	debug "$1: $2"
 	if [ -z "$NOOP" ]
 	then
 		echo "$PROGNAME: $1: $2" 1>&3
@@ -28,10 +46,10 @@ run()
 	return 0
 }
 
-args=$(getopt fn $*)
+args=$(getopt fnv $*)
 if [ $? -ne 0 ]
 then
-	echo "usage: $0 [-fn] [repo ...]" 1>&2
+	echo "usage: $PROGNAME [-fnv] [repo ...]" 1>&2
 	exit 1
 fi
 
@@ -45,6 +63,8 @@ do
 			NOOP=1 ; shift ;;
 		-f)
 			FORCE=1 ; shift ;;
+		-v)
+			VERBOSE=1 ; shift ;;
 		--)
 			shift ; break ;;
         esac
@@ -57,16 +77,13 @@ if [ ! -r "$CONFIG_LOCAL" ]
 then
 	if [ ! -r "$CONFIG_GLOBAL" ]
 	then
-		echo "$0: no config found" 1>&2
-		echo "$0: ...tried: $CONFIG_GLOBAL" 1>&2
-		echo "$0: ...tried: $CONFIG_LOCAL" 1>&2
-		exit 1
+		fatal "$PROGNAME: no config found"
 	fi
 	CONFIG="$CONFIG_GLOBAL"
 else
 	CONFIG="$CONFIG_LOCAL"
 fi
-echo "$0: using config: $CONFIG"
+debug "using config: $CONFIG"
 
 # Read the API secret from the configuration.
 
@@ -89,8 +106,7 @@ do
 done < "$CONFIG"
 if [ -z "$API_SECRET" ]
 then
-	echo "$0: no API secret specified" 1>&2
-	exit 1
+	fatal "no API secret specified"
 fi
 
 # Read the API key from the configuration.
@@ -103,8 +119,7 @@ do
 done < "$CONFIG"
 if [ -z "$API_KEY" ]
 then
-	echo "$0: no API key specified" 1>&2
-	exit 1
+	fatal "no API key specified"
 fi
 
 # Read the server from the configuration.
@@ -117,22 +132,20 @@ do
 done < "$CONFIG"
 if [ -z "$SERVER" ]
 then
-	echo "$0: no server specified" 1>&2
-	exit 1
+	fatal "no server specified"
 fi
 
-echo "$0: using API key: $API_KEY"
-echo "$0: using API secret: $API_SECRET"
-echo "$0: using server: $SERVER"
+debug "using API key: $API_KEY"
+debug "using API secret: $API_SECRET"
+debug "using server: $SERVER"
 
 for dep in $DEP_BINS
 do
-	echo "$0: check binary dependency: $dep"
+	debug "$0: check binary dependency: $dep"
 	which "$dep" 2>/dev/null 1>&2
 	if [ $? -ne 0 ]
 	then
-		echo "$0: binary dep not in PATH: $dep" 1>&2
-		exit 1
+		fatal "binary dep not in PATH: $dep"
 	fi
 done
 
@@ -143,10 +156,9 @@ then
 	mkdir -p "$STAGING"
 	if [ $? -ne 0 ]
 	then
-		echo "$0: could not create: $STAGING" 1>&2
-		exit 1
+		fatal "could not create: $STAGING"
 	fi
-	echo "$0: created: $STAGING"
+	debug "created: $STAGING"
 fi
 
 # Process each repository line.
@@ -158,8 +170,7 @@ do
 	reponame="$(echo $repo | sed -e 's!.*/!!' -e 's!\.git$!!')"
 	if [ -z "$reponame" ]
 	then
-		echo "$0: malformed repo: $repo" 1>&2
-		exit 1
+		fatal "malformed repo: $repo"
 	fi
 
 	# Iterate through the command-line arguments, only if specified,
@@ -177,7 +188,7 @@ do
 		done
 		if [ -n "$prog" ]
 		then
-			echo "$0: ignoring: $reponame"
+			debug "ignoring: $reponame"
 			continue
 		fi
 	fi
@@ -187,7 +198,7 @@ do
 
 	set -e
 
-	echo "$0: $repo: $reponame"
+	debug "$repo: $reponame"
 
 	[ -n "$NOOP" ] || exec 3>/tmp/minci.log
 	[ -n "$NOOP" ] || cd "$STAGING"
@@ -248,7 +259,7 @@ do
 		if [ -z "$FORCE" -a -n "$head" -a \
 		     -n "$nhead" -a "$head" = "$nhead" ]
 		then
-			echo "$0: repository is fresh: $reponame"
+			debug "repository is fresh: $reponame"
 			TIME_start=0
 			break
 		fi
@@ -280,19 +291,19 @@ do
 
 	if [ $TIME_start -eq 0 ]
 	then
-		echo "$0: IGNORING: $reponame"
+		msg "ignoring: $reponame"
 		[ -n "$NOOP" ] || rm -f /tmp/minci.log
 		continue
 	fi
 
 	if [ $TIME_distcheck -eq 0 ]
 	then
-		echo "$0: FAILURE: $reponame"
+		msg "failure: $reponame"
 	else
-		echo "$0: success: $reponame"
+		msg "success: $reponame"
 	fi
 
-	echo "$0: computing signature"
+	debug "computing signature"
 
 	UNAME_M=$(uname -m | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g')
 	UNAME_N=$(uname -n | sed -e 's!^[ ]*!!g' -e 's![ ]*$!!g')
@@ -338,7 +349,7 @@ do
 	# It includes the signature and optionally the build log (only
 	# if we didn't get to the end).
 
-	echo "$0: sending report: $SERVER"
+	debug "sending report: $SERVER"
 
 	REPORT_LOG=
 	if [ $TIME_distcheck -eq 0 ]
