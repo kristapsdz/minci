@@ -21,9 +21,8 @@ body > header a				{ color: #fff;
 					  margin-left: auto; }
 h1					{ font-size: inherit;
 					  text-align: center; }
-h1 a, h1 span				{ display: inline-block; }
-h1 a					{ margin-right: 0.3rem; }
-h1 span					{ margin-left: 0.3rem; }
+h1 a, h1 span				{ display: inline-block;
+					  margin: 0 0.3rem; }
 .singleton				{ width: calc(100% - 1rem);
 					  max-width: 66rem;
 					  margin-right: auto;
@@ -34,35 +33,38 @@ div.table > :first-child		{ display: none;
 					  font-weight: bold;
 					  text-shadow: 0 0 #000;
 					  color: #fff; }
+.report-pass				{ color: green; }
+.report-fail				{ color: red; }
 .lefthead.report-id,
 .lefthead.project-name,
 .lefthead.project-repo,
 .cell.report-id,
-.cell.report-start,
+.cell.report-passfail,
 .cell.project-name			{ display: inline-block; }
+.cell.report-system			{ white-space: nowrap;
+					  overflow: hidden;
+					  text-overflow: ellipsis; }
+.cell.report-system			{ display: inline; }
 .lefthead.project-name			{ border-right: thin solid #888;
 					  padding-right: 0.5rem;
 					  margin-right: 0.5rem; }
 .lefthead.project-repo::before		{ content: 'repository'; }
 .lefthead.report-id::after,
 .cell.report-start::after,
+.cell.project-name::after,
 .cell.report-id::after			{ content: ', ';
 					  opacity: 0.5;
 					  margin-right: 0.2rem; }
 .lefthead.report-id::before,
 .cell.report-id::before			{ content: '#';
 					  opacity: 0.5; }
-.cell.report-env::before		{ content: 'env'; }
-.cell.report-deps::before		{ content: 'deps'; }
-.cell.report-build::before		{ content: 'build'; }
-.cell.report-regress::before		{ content: 'test'; }
-.cell.report-install::before		{ content: 'install'; }
-.cell.report-dist::before		{ content: 'check'; }
-.cell.report-system::before		{ content: 'System ';
-					  opacity: 0.5; }
-.row					{ padding: 0.5rem; }
+.row					{ padding: 0.5rem;
+					  white-space: nowrap; 
+				  	  overflow: hidden; 
+				  	  text-overflow: ellipsis; }
 .cell					{ padding: 0.25rem 0; }
-.cellgroup				{ display: flex; }
+.cell.report-start,
+.cellgroup				{ display: none; }
 .cellgroup .cell			{ flex: 1; }
 .cellgroup .cell::before		{ display: block;
 					  padding-right: 0;
@@ -108,25 +110,20 @@ div.table > :first-child		{ display: none;
 @media (min-width: 80rem) {
   h1					{ text-align: left; }
   div.table > :first-child,
-  .row					{ display: flex; }
+  .row					{ display: flex;
+	  			  	  padding: 0; }
   .head, .cell				{ width: 4rem;
-					  padding: 0 1rem; }
+					  padding: 0.5rem 1rem; }
+  .head.report-passfail,
+  .cell.report-passfail			{ width: 0.5rem; }
   .head.project-name,
   .cell.project-name			{ width: 8rem; }
   .head.report-start,
   .cell.report-start			{ width: 6rem; }
+  .cell.report-start			{ display: inline-block; }
   .report-system			{ flex: 1; }
-  .cell.project-name::before,
-  .cell.report-start::before,
-  .cell.report-env::before,
-  .cell.report-deps::before,
-  .cell.report-build::before,
-  .cell.report-regress::before,
-  .cell.report-install::before,
-  .cell.report-dist::before,
-  .cell.report-system::before		{ content: none;
-					  padding: 0; }
   .cell.report-start::after,
+  .cell.project-name::after,
   .cell.report-id::after		{ content: none;
 					  margin-right: 0; }
   .head.project-name::before		{ content: 'project'; }
@@ -137,8 +134,8 @@ div.table > :first-child		{ display: none;
   .head.report-regress::before		{ content: 'test'; }
   .head.report-install::before		{ content: 'install'; }
   .head.report-dist::before		{ content: 'check'; }
-  .head.report-system-ext::before,
   .head.report-system::before		{ content: 'system'; }
+  .cellgroup				{ display: flex; }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -147,7 +144,9 @@ div.table > :first-child		{ display: none;
   div.table > :nth-child(odd)		{ background-color: #6d6d6d; }
   a					{ color: yellow; }
   a:visited				{ color: rgb(255, 255, 180); }
+  .report-pass,
   .report-success::before		{ color: rgb(50, 255, 50); }
+  .report-fail,
   .report-failure::before,
   .cellgroup .cell span::after		{ color: rgb(255, 50, 50); }
   .report-log				{ background-color: #000; }

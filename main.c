@@ -107,6 +107,26 @@ html_open(struct khtmlreq *req, const char *title)
 }
 
 /*
+ * Format the uname fields to have useful (and short) output.
+ */
+static void
+get_html_uname(struct khtmlreq *req, const struct report *p)
+{
+
+	khtml_puts(req, p->unames);
+	khtml_puts(req, " ");
+	khtml_puts(req, p->unamer);
+	khtml_puts(req, " ");
+	khtml_puts(req, p->unamem);
+
+	/* This isn't particularly useful information. */
+#if 0
+	khtml_puts(req, "|");
+	khtml_puts(req, p->unamev);
+#endif
+}
+
+/*
  * Print a block with a time offset of "start" to "given".
  * If "given" is zero, suppress any content printing.
  */
@@ -141,6 +161,9 @@ get_html_last_header(struct khtmlreq *req)
 
 	khtml_attr(req, KELEM_DIV, 
 		KATTR_CLASS, "row", KATTR__MAX);
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"head report-passfail", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
 		"head report-id", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
@@ -219,6 +242,15 @@ get_html_last_report(const struct report *p, void *arg)
 		KATTR_CLASS, "row", KATTR__MAX);
 
 	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
+		"cell report-passfail", KATTR__MAX);
+	khtml_attr(&r->html, KELEM_SPAN, KATTR_CLASS, 
+		p->distcheck ? "report-pass" : "report-fail",
+		KATTR__MAX);
+	khtml_ncr(&r->html, p->distcheck ? 0x2714 : 0x2717);
+	khtml_closeelem(&r->html, 1); /* span */
+	khtml_closeelem(&r->html, 1); /* cell */
+
+	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
 		"cell report-id", KATTR__MAX);
 	khtml_attr(&r->html, KELEM_A,
 		KATTR_HREF, urlid, KATTR__MAX);
@@ -261,9 +293,7 @@ get_html_last_report(const struct report *p, void *arg)
 
 	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
 		"cell report-system", KATTR__MAX);
-	khtml_puts(&r->html, p->unames);
-	khtml_puts(&r->html, " ");
-	khtml_puts(&r->html, p->unamer);
+	get_html_uname(&r->html, p);
 	khtml_closeelem(&r->html, 1); /* cell */
 
 	khtml_attr(&r->html, KELEM_DIV,
@@ -376,16 +406,8 @@ get_single_html(struct kreq *r, const struct report *p)
 	khtml_closeelem(&req, 1); /* div */
 
 	khtml_attr(&req, KELEM_DIV, KATTR_CLASS,
-		"lefthead report-system-ext", KATTR__MAX);
-	khtml_puts(&req, p->unames);
-	khtml_puts(&req, " ");
-	khtml_puts(&req, p->unamen);
-	khtml_puts(&req, " ");
-	khtml_puts(&req, p->unamer);
-	khtml_puts(&req, " ");
-	khtml_puts(&req, p->unamev);
-	khtml_puts(&req, " ");
-	khtml_puts(&req, p->unamem);
+		"lefthead report-system", KATTR__MAX);
+	get_html_uname(&req, p);
 	khtml_closeelem(&req, 1); /* div */
 
 	khtml_attr(&req, KELEM_DIV,
@@ -532,8 +554,15 @@ get_last(struct kreq *r, time_t mtime)
 		khtml_puts(&req.html, "Date Reports");
 		khtml_closeelem(&req.html, 1); /* span */
 		khtml_closeelem(&req.html, 1); /* h1 */
-	} else
+	} else {
+		khtml_elem(&req.html, KELEM_SPAN);
 		khtml_puts(&req.html, "CI Dashboard");
+		khtml_closeelem(&req.html, 1); /* span */
+		khtml_ncr(&req.html, 0x203a);
+		khtml_elem(&req.html, KELEM_SPAN);
+		khtml_puts(&req.html, "All Projects");
+		khtml_closeelem(&req.html, 1); /* span */
+	}
 
 	khtml_closeelem(&req.html, 1); /* h1 */
 	khtml_closeelem(&req.html, 1); /* header */
