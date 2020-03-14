@@ -526,7 +526,7 @@ get_last(struct kreq *r, time_t mtime)
 	http_open(r, KHTTP_200, r->mime, mtime);
 	req.r = r;
 	khtml_open(&req.html, r, 0);
-	html_open(&req.html, "Recent Minimal CI Reports");
+	html_open(&req.html, "Minimal CI Reports");
 
 	/* Output header. */
 
