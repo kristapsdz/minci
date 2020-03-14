@@ -541,7 +541,11 @@ get_last(struct kreq *r, time_t mtime)
 		khtml_closeelem(&req.html, 1); /* a */
 		khtml_ncr(&req.html, 0x203a);
 		khtml_elem(&req.html, KELEM_SPAN);
-		khtml_puts(&req.html, "Project Reports");
+		khtml_puts(&req.html, "Project Dashboard");
+		khtml_closeelem(&req.html, 1); /* span */
+		khtml_ncr(&req.html, 0x203a);
+		khtml_elem(&req.html, KELEM_SPAN);
+		khtml_puts(&req.html, kpn->parsed.s);
 		khtml_closeelem(&req.html, 1); /* span */
 		khtml_closeelem(&req.html, 1); /* h1 */
 	} else if (kpd != NULL) {
@@ -574,7 +578,7 @@ get_last(struct kreq *r, time_t mtime)
 	get_html_last_header(&req.html);
 
 	if (kpn != NULL)
-		db_report_iterate_lastname(r->arg, 
+		db_report_iterate_dashname(r->arg, 
 			get_html_last_report, &req,
 			kpn->parsed.s); /* project.name */
 	else if (kpd != NULL)

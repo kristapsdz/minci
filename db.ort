@@ -105,17 +105,17 @@ struct report {
 
 	insert;
 
-	iterate project.name: limit 50 name lastname order ctime desc;
 	iterate ctime ge, ctime le: limit 50 name lastdate order ctime desc;
 
 	iterate: name dash order projectid,ctime desc grouprow unamehash maxrow ctime;
+	iterate project.name: name dashname order ctime desc grouprow unamehash maxrow ctime;
 
 	search id: name byid;
 
 	roles consumer {
 		iterate dash;
 		iterate lastdate;
-		iterate lastname;
+		iterate dashname;
 		noexport userid;
 		search byid;
 	};
