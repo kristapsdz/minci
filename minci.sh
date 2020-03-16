@@ -7,6 +7,7 @@
 MAKE="make"
 API_SECRET=
 DEP_BINS="mandoc openssl git curl"
+# TODO: make sqlite3 be per-system.
 NOOP=
 LOG=
 VERBOSE=
@@ -251,6 +252,9 @@ do
 			then
 				cd "$reponame"
 			fi
+			# Grabs the newest .git/FETCH_HEAD.
+			run "git fetch origin" "$reponame" || break
+			run "git reset --hard origin/master" "$reponame" || break
 		fi
 
 		# If the FETCH_HEAD commit doesn't change when we freshen the
