@@ -100,6 +100,9 @@ struct report {
 	field unamehash text limit eq 32
 		comment "Hash of uname[mnrsv].  This is used to quickly
 			 establish a kind of machine identity.";
+	field fetchhead text limit le 40 default ""
+		comment "Git hash for branch master.  May be empty.";
+			 
 
 	field id int rowid;
 

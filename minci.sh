@@ -215,6 +215,7 @@ do
         TIME_test=0
         TIME_install=0
         TIME_distcheck=0
+	FETCH_HEAD=
 
 	TIME_start=$(date +%s)
 
@@ -224,7 +225,7 @@ do
 	while :
 	do
 		head=""
-		nhead=""
+		FETCH_HEAD=""
 
 		# If we have a repository already, update and clean it
 		# out; otherwise, clone it afresh.
@@ -235,22 +236,21 @@ do
 			if [ -z "$NOOP" ]
 			then
 				cd "$reponame"
-				head=$(cut -f1 .git/FETCH_HEAD 2>/dev/null) || head=""
+				head=$(cut -f1 .git/FETCH_HEAD 2>/dev/null | head -1) || head=""
 			fi
 			run "git fetch origin" "$reponame" || break
 			run "git reset --hard origin/master" "$reponame" || break
 			run "git clean -fdx" "$reponame" || break
 			if [ -z "$NOOP" ]
 			then
-				nhead=$(cut -f1 .git/FETCH_HEAD) || nhead=""
+				FETCH_HEAD=$(cut -f1 .git/FETCH_HEAD | head -1) || FETCH_HEAD=""
 			fi
 		else
-			head=""
-			nhead=""
 			run "git clone $repo" "$reponame" || break
 			if [ -z "$NOOP" ]
 			then
 				cd "$reponame"
+				FETCH_HEAD=$(cut -f1 .git/FETCH_HEAD | head -1) || FETCH_HEAD=""
 			fi
 			# Grabs the newest .git/FETCH_HEAD.
 			run "git fetch origin" "$reponame" || break
@@ -261,7 +261,7 @@ do
 		# repository, then doing re-test it unless -f was passed.
 
 		if [ -z "$FORCE" -a -n "$head" -a \
-		     -n "$nhead" -a "$head" = "$nhead" ]
+		     -n "$FETCH_HEAD" -a "$head" = "$FETCH_HEAD" ]
 		then
 			debug "repository is fresh: $reponame"
 			TIME_start=0
@@ -324,6 +324,7 @@ do
 	QUERY="${QUERY}&report-build=${TIME_build}"
 	QUERY="${QUERY}&report-distcheck=${TIME_distcheck}"
 	QUERY="${QUERY}&report-env=${TIME_env}"
+	QUERY="${QUERY}&report-fetchhead=${FETCH_HEAD}"
 	QUERY="${QUERY}&report-depend=${TIME_depend}"
 	QUERY="${QUERY}&report-install=${TIME_install}"
 	if [ $TIME_distcheck -eq 0 ]
@@ -379,6 +380,7 @@ do
 		     -F "report-unamer=${UNAME_R}" \
 		     -F "report-unames=${UNAME_S}" \
 		     -F "report-unamev=${UNAME_V}" \
+		     -F "report-fetchhead=${FETCH_HEAD}" \
 		     -F "user-apikey=${API_KEY}" \
 		     -F "signature=${SIGNATURE}" \
 		     "${SERVER}"

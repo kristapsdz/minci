@@ -624,7 +624,7 @@ post(struct kreq *r)
 	struct kpair	*kps, *kpe, *kpd, *kpb, *kpt,
 			*kpi, *kpc, *kpn, *kpl, *sig,
 			*kpu, *kpum, *kpun, *kpur, *kpus,
-			*kpuv;
+			*kpuv, *kpf;
 	size_t		 i, sz;
 	MD5_CTX		 ctx;
 	char		*buf = NULL;
@@ -652,6 +652,7 @@ post(struct kreq *r)
 	    (kpd = r->fieldmap[VALID_REPORT_DEPEND]) == NULL ||
 	    (kpc = r->fieldmap[VALID_REPORT_DISTCHECK]) == NULL ||
 	    (kpe = r->fieldmap[VALID_REPORT_ENV]) == NULL ||
+	    (kpf = r->fieldmap[VALID_REPORT_FETCHHEAD]) == NULL ||
 	    (kpi = r->fieldmap[VALID_REPORT_INSTALL]) == NULL ||
 	    (kpl = r->fieldmap[VALID_REPORT_LOG]) == NULL ||
 	    (kps = r->fieldmap[VALID_REPORT_START]) == NULL ||
@@ -751,6 +752,7 @@ post(struct kreq *r)
 		"report-build=%" PRId64 "&"
 		"report-distcheck=%" PRId64 "&"
 		"report-env=%" PRId64 "&"
+		"report-fetchhead=%s&"
 		"report-depend=%" PRId64 "&"
 		"report-install=%" PRId64 "&"
 		"report-log=%s&"
@@ -766,6 +768,7 @@ post(struct kreq *r)
 		kpb->parsed.i,
 		kpc->parsed.i,
 		kpe->parsed.i,
+		kpf->parsed.s,
 		kpd->parsed.i,
 		kpi->parsed.i,
 		logdigest,
@@ -824,7 +827,8 @@ post(struct kreq *r)
 		kpur->parsed.s, /* unamer */
 		kpus->parsed.s, /* unames */
 		kpuv->parsed.s, /* unamev */
-		unamedigest); /* unamehash */
+		unamedigest, /* unamehash */
+		kpf->parsed.s); /* fetchhead */
 
 	kutil_info(r, user->email, "log submitted: %s", proj->name);
 	http_open(r, KHTTP_201, KMIME__MAX, 0);
