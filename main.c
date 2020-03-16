@@ -88,7 +88,7 @@ html_open(struct khtmlreq *req, const char *title)
 	khtml_elem(req, KELEM_HTML);
 	khtml_elem(req, KELEM_HEAD);
 	khtml_elem(req, KELEM_TITLE);
-	khtml_puts(req, "BSD.lv: ");
+	khtml_puts(req, "Minimal CI: ");
 	khtml_puts(req, title);
 	khtml_closeelem(req, 1); /* title */
 	khtml_attr(req, KELEM_META, 
@@ -350,7 +350,7 @@ get_single_html(struct kreq *r, const struct report *p)
 		REPO_BASE, p->project.name);
 
 	khtml_open(&req, r, 0);
-	html_open(&req, "Minimal CI Report");
+	html_open(&req, "Report");
 
 	/* Heading. */
 
@@ -526,7 +526,7 @@ get_last(struct kreq *r, time_t mtime)
 	http_open(r, KHTTP_200, r->mime, mtime);
 	req.r = r;
 	khtml_open(&req.html, r, 0);
-	html_open(&req.html, "Minimal CI Reports");
+	html_open(&req.html, "Reports");
 
 	/* Output header. */
 
