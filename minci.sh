@@ -215,12 +215,16 @@ do
         TIME_test=0
         TIME_install=0
         TIME_distcheck=0
+
+	# Set our last-commit checksum to be empty as well.
+
 	FETCH_HEAD=
 
-	TIME_start=$(date +%s)
-
+	# Begin processing.
 	# This is wrapped in an infinite loop so we can just use `break`
 	# to come out of error situations and still send the report.
+
+	TIME_start=$(date +%s)
 
 	while :
 	do
@@ -268,6 +272,9 @@ do
 			break
 		fi
 
+		# Run ./configure, make, make regress, make install,
+		# make distcheck.  If any fail, then break out.
+
 		TIME_env=$(date +%s)
 
 		run "./configure PREFIX=build" "$reponame" || break
@@ -284,6 +291,8 @@ do
 
 		run "${MAKE} distcheck" "$reponame" || break
 		TIME_distcheck=$(date +%s)
+
+		# Success!
 		break
 	done
 

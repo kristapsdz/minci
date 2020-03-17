@@ -1,36 +1,43 @@
-PREFIX		 = /var/www/vhosts/kristaps.bsd.lv
+WWWPREFIX	 = /var/www/vhosts/kristaps.bsd.lv
+PREFIX		 = /usr/local
 DATADIR		 = /vhosts/kristaps.bsd.lv/data
 
-sinclude Makefile.local
-
-OBJS 		 = db.o main.o
-CPPFLAGS	+= -I/usr/local/include
 CFLAGS	  	+= -g -W -Wall -Wextra -Wmissing-prototypes
 CFLAGS	  	+= -Wstrict-prototypes -Wwrite-strings -Wno-unused-parameter
 CFLAGS		+= -DDATADIR=\"$(DATADIR)\"
-CFLAGS		+= `pkg-config --cflags kcgi-html sqlbox`
+
+CFLAGS_PKG	!= pkg-config --cflags kcgi-html sqlbox
+LIBS_PKG	!= pkg-config --libs --static kcgi-html sqlbox
+CFLAGS		+= $(CFLAGS_PKG)
+LDADD		+= $(LIBS_PKG)
+
+OBJS 		 = db.o main.o
 
 all: minci.cgi
 
-install: update
-	mkdir -p $(PREFIX)/data
-	install -o www -m 0600 minci.db $(PREFIX)/data
+install: all
+	mkdir -p $(PREFIX)/bin
+	install -m 0555 minci.sh $(PREFIX)/bin
 
-update: all
-	mkdir -p $(PREFIX)/cgi-bin
-	mkdir -p $(PREFIX)/htdocs
-	install -o www -m 0444 minci.css $(PREFIX)/htdocs
-	install -o www -m 0500 minci.cgi $(PREFIX)/cgi-bin
+installcgi: updatecgi
+	mkdir -p $(WWWPREFIX)/data
+	install -o www -m 0600 minci.db $(WWWPREFIX)/data
+
+updatecgi: all
+	mkdir -p $(WWWPREFIX)/cgi-bin
+	mkdir -p $(WWWPREFIX)/htdocs
+	install -o www -m 0444 minci.css $(WWWPREFIX)/htdocs
+	install -o www -m 0500 minci.cgi $(WWWPREFIX)/cgi-bin
 
 updatedb:
-	mkdir -p $(PREFIX)/data
-	cp -f $(PREFIX)/data/minci.db $(PREFIX)/data/minci.db.old
-	cp -f $(PREFIX)/data/minci.ort $(PREFIX)/data/minci.ort.old
-	ort-sqldiff $(PREFIX)/data/minci.ort db.ort | sqlite3 $(PREFIX)/data/minci.db
-	install -m 0400 db.ort $(PREFIX)/data/minci.ort
+	mkdir -p $(WWWPREFIX)/data
+	cp -f $(WWWPREFIX)/data/minci.db $(WWWPREFIX)/data/minci.db.old
+	cp -f $(WWWPREFIX)/data/minci.ort $(WWWPREFIX)/data/minci.ort.old
+	ort-sqldiff $(WWWPREFIX)/data/minci.ort db.ort | sqlite3 $(WWWPREFIX)/data/minci.db
+	install -m 0400 db.ort $(WWWPREFIX)/data/minci.ort
 
 minci.cgi: $(OBJS) minci.db
-	$(CC) -o $@ -static $(OBJS) `pkg-config --libs --static kcgi-html sqlbox`
+	$(CC) -o $@ -static $(OBJS) $(LDFLAGS) $(LDADD)
 
 clean:
 	rm -f $(OBJS) minci.cgi db.c extern.h minci.db db.sql
