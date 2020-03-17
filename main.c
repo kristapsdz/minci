@@ -14,12 +14,14 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <sys/queue.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <math.h> /* floor */
 #include <md5.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -35,6 +37,9 @@
 
 #ifndef REPO_BASE
 #define REPO_BASE "https://github.com/kristapsdz"
+#endif
+#ifndef COMMIT_BASE
+#define COMMIT_BASE REPO_BASE
 #endif
 
 enum	page {
@@ -168,6 +173,9 @@ get_html_last_header(struct khtmlreq *req)
 		"head report-id", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
+		"head report-commit", KATTR__MAX);
+	khtml_closeelem(req, 1); /* cell */
+	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
 		"head report-start", KATTR__MAX);
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
@@ -195,8 +203,8 @@ get_html_last_header(struct khtmlreq *req)
 	khtml_closeelem(req, 1); /* cell */
 	khtml_attr(req, KELEM_DIV, KATTR_CLASS, 
 		"head report-dist", KATTR__MAX);
-	khtml_closeelem(req, 1); /* cellgroup */
 	khtml_closeelem(req, 1); /* cell */
+	khtml_closeelem(req, 1); /* cellgroup */
 	khtml_closeelem(req, 1); /* row */
 }
 
@@ -209,7 +217,8 @@ get_html_last_report(const struct report *p, void *arg)
 	struct req	*r = arg;
 	struct tm	 tm;
 	int64_t		 date;
-	char		*urlid, *urlproj, *urldate;
+	char		*urlid, *urlproj, *urldate, *urlcommit;
+	char		 commitshort[8];
 
 	memset(&tm, 0, sizeof(struct tm));
 	KUTIL_EPOCH2TM(p->ctime, &tm);
@@ -234,6 +243,9 @@ get_html_last_report(const struct report *p, void *arg)
 		pages[PAGE_INDEX],
 		valid_keys[VALID_REPORT_CTIME].name,
 		KATTRX_INT, date, NULL);
+	kasprintf(&urlcommit, "%s/%s/tree/%s",
+		COMMIT_BASE, p->project.name,
+		p->fetchhead);
 
 	memset(&tm, 0, sizeof(struct tm));
 	KUTIL_EPOCH2TM(p->start, &tm);
@@ -262,6 +274,15 @@ get_html_last_report(const struct report *p, void *arg)
 		khtml_int(&r->html, 0);
 	khtml_int(&r->html, p->id);
 	khtml_closeelem(&r->html, 1); /* link */
+	khtml_closeelem(&r->html, 1); /* cell */
+
+	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
+		"cell report-commit", KATTR__MAX);
+	khtml_attr(&r->html, KELEM_A, KATTR_HREF, 
+		urlcommit, KATTR__MAX);
+	strlcpy(commitshort, p->fetchhead, sizeof(commitshort));
+	khtml_puts(&r->html, commitshort);
+	khtml_closeelem(&r->html, 1); /* a */
 	khtml_closeelem(&r->html, 1); /* cell */
 
 	khtml_attr(&r->html, KELEM_DIV, KATTR_CLASS, 
@@ -316,6 +337,7 @@ get_html_last_report(const struct report *p, void *arg)
 	free(urlid);
 	free(urlproj);
 	free(urldate);
+	free(urlcommit);
 }
 
 /*
@@ -408,6 +430,11 @@ get_single_html(struct kreq *r, const struct report *p)
 	khtml_attr(&req, KELEM_DIV, KATTR_CLASS,
 		"lefthead report-system", KATTR__MAX);
 	get_html_uname(&req, p);
+	khtml_closeelem(&req, 1); /* div */
+
+	khtml_attr(&req, KELEM_DIV, KATTR_CLASS,
+		"lefthead report-system-ext", KATTR__MAX);
+	khtml_puts(&req, p->unamev);
 	khtml_closeelem(&req, 1); /* div */
 
 	khtml_attr(&req, KELEM_DIV,
@@ -506,6 +533,213 @@ get_single(struct kreq *r, time_t mtime)
 	db_report_free(p);
 }
 
+struct	dash {
+	const struct project	*proj;
+	const char		*nhash;
+	time_t			 nctime;
+	size_t			 finished;
+	size_t			 success;
+	size_t			 pending;
+};
+
+/*
+ * List the last *n* records, sorted by time of accept.
+ * Always outputs HTTP 200.
+ */
+static void
+get_dash(struct kreq *r, time_t mtime)
+{
+	struct req	 req;
+	struct report_q	*rq;
+	struct report	*rn;
+	struct dash	*dash = NULL, *curdash;
+	size_t		 i, dashsz = 0;
+	struct tm	 tm;
+	char		*urlproj, *urlcommit;
+	char		 datebuf[32], commitshort[8];
+
+	/* Open output page. */
+
+	http_open(r, KHTTP_200, r->mime, mtime);
+	req.r = r;
+	khtml_open(&req.html, r, 0);
+	html_open(&req.html, "Reports");
+
+	/* Output header. */
+
+	khtml_elem(&req.html, KELEM_HEADER);
+	khtml_attr(&req.html, KELEM_H1, 
+		KATTR_CLASS, "table", KATTR__MAX);
+
+	khtml_elem(&req.html, KELEM_SPAN);
+	khtml_puts(&req.html, "CI Dashboard");
+	khtml_closeelem(&req.html, 1); /* span */
+	khtml_ncr(&req.html, 0x203a);
+	khtml_elem(&req.html, KELEM_SPAN);
+	khtml_puts(&req.html, "All Projects");
+	khtml_closeelem(&req.html, 1); /* span */
+	khtml_closeelem(&req.html, 1); /* h1 */
+	khtml_closeelem(&req.html, 1); /* header */
+
+	/* Output data. */
+
+	khtml_attr(&req.html, KELEM_DIV, 
+		KATTR_CLASS, "table alltable", KATTR__MAX);
+
+	rq = db_report_list_dash(r->arg);
+
+	/* Establish the newest report hash. */
+
+	TAILQ_FOREACH(rn, rq, _entries) {
+		for (i = 0; i < dashsz; i++)
+			if (dash[i].proj->id == rn->projectid)
+				break;
+
+		if (i == dashsz) {
+			dash = kreallocarray(dash, 
+				dashsz + 1, sizeof(struct dash));
+			dashsz++;
+			curdash = &dash[i];
+			memset(curdash, 0, sizeof(struct dash));
+			curdash->proj = &rn->project;
+			curdash->nhash = rn->fetchhead;
+			curdash->nctime = rn->ctime;
+		} else
+			curdash = &dash[i];
+
+		if (rn->ctime > curdash->nctime) {
+			curdash->nhash = rn->fetchhead;
+			curdash->nctime = rn->ctime;
+		}
+	}
+
+	/* 
+	 * Compute how many have completed the newest hash.
+	 * The empty hash is always considered old.
+	 */
+
+	TAILQ_FOREACH(rn, rq, _entries) {
+		for (i = 0; i < dashsz; i++)
+			if (dash[i].proj->id == rn->projectid)
+				break;
+		assert(i < dashsz);
+		if (dash[i].nhash[0] != '\0' &&
+		    strcmp(rn->fetchhead, dash[i].nhash) == 0) {
+			dash[i].finished++;
+			dash[i].success += rn->distcheck != 0;
+		} else {
+			dash[i].pending++;
+		}
+	}
+
+	/* Header row. */
+
+	khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+		"row", KATTR__MAX);
+	khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+		"head report-successrate", KATTR__MAX);
+	khtml_closeelem(&req.html, 1); /* cell */
+	khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+		"head project-name", KATTR__MAX);
+	khtml_closeelem(&req.html, 1); /* cell */
+	khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+		"head report-finished-pct", KATTR__MAX);
+	khtml_closeelem(&req.html, 1); /* cell */
+	khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+		"head report-pending", KATTR__MAX);
+	khtml_closeelem(&req.html, 1); /* cell */
+	khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+		"head report-newest", KATTR__MAX);
+	khtml_closeelem(&req.html, 1); /* cell */
+	khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+		"head report-commit", KATTR__MAX);
+	khtml_closeelem(&req.html, 1); /* cell */
+	khtml_closeelem(&req.html, 1); /* row */
+
+	/* Now each project's data. */
+
+	for (i = 0; i < dashsz; i++) {
+		urlproj = kutil_urlpartx(NULL,
+			r->pname, 
+			ksuffixes[KMIME_TEXT_HTML],
+			pages[PAGE_INDEX],
+			valid_keys[VALID_PROJECT_NAME].name,
+			KATTRX_STRING, dash[i].proj->name, NULL);
+		kasprintf(&urlcommit, "%s/%s/tree/%s",
+			COMMIT_BASE, dash[i].proj->name,
+			dash[i].nhash);
+
+		assert(dash[i].finished + dash[i].pending > 0);
+
+		khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+			"row", KATTR__MAX);
+
+		khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+			"cell report-successrate", KATTR__MAX);
+		khtml_attr(&req.html, KELEM_SPAN, KATTR_CLASS, 
+			dash[i].success == dash[i].finished ?
+			"report-pass" : "report-fail",
+			KATTR__MAX);
+		khtml_int(&req.html,
+			dash[i].finished == 0 ? 0 : floor
+			(100 * dash[i].success / dash[i].finished));
+		khtml_closeelem(&req.html, 1); /* span */
+		khtml_closeelem(&req.html, 1); /* cell */
+
+		khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+			"cell project-name", KATTR__MAX);
+		khtml_attr(&req.html, KELEM_A, KATTR_HREF, 
+			urlproj, KATTR__MAX);
+		khtml_puts(&req.html, dash[i].proj->name);
+		khtml_closeelem(&req.html, 1); /* a */
+		khtml_closeelem(&req.html, 1); /* cell */
+
+		khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+			"cell report-finished-pct", KATTR__MAX);
+		khtml_int(&req.html, floor(100 * dash[i].finished / 
+		          (dash[i].finished + dash[i].pending)));
+		khtml_closeelem(&req.html, 1); /* cell */
+
+		khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+			"cell report-pending", KATTR__MAX);
+		khtml_elem(&req.html, KELEM_SPAN);
+		khtml_int(&req.html, dash[i].finished);
+		khtml_closeelem(&req.html, 1); /* span */
+		khtml_elem(&req.html, KELEM_SPAN);
+		khtml_int(&req.html, dash[i].pending);
+		khtml_closeelem(&req.html, 1); /* span */
+		khtml_closeelem(&req.html, 1); /* cell */
+
+		khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+			"cell report-newest", KATTR__MAX);
+		gmtime_r(&dash[i].nctime, &tm);
+		strftime(datebuf, sizeof(datebuf), "%F %T", &tm);
+		khtml_puts(&req.html, datebuf);
+		khtml_closeelem(&req.html, 1); /* cell */
+
+		khtml_attr(&req.html, KELEM_DIV, KATTR_CLASS, 
+			"cell report-commit", KATTR__MAX);
+		khtml_attr(&req.html, KELEM_A, KATTR_HREF, 
+			urlcommit, KATTR__MAX);
+		strlcpy(commitshort, dash[i].nhash, sizeof(commitshort));
+		khtml_puts(&req.html, commitshort);
+		khtml_closeelem(&req.html, 1); /* a */
+		khtml_closeelem(&req.html, 1); /* cell */
+
+		khtml_closeelem(&req.html, 1); /* row */
+		free(urlproj);
+		free(urlcommit);
+	}
+
+	khtml_closeelem(&req.html, 1); /* table */
+	khtml_closeelem(&req.html, 1); /* body */
+	khtml_closeelem(&req.html, 1); /* html */
+	khtml_close(&req.html);
+
+	db_report_freeq(rq);
+	free(dash);
+}
+
 /*
  * List the last *n* records, sorted by time of accept.
  * Always outputs HTTP 200.
@@ -515,11 +749,14 @@ get_last(struct kreq *r, time_t mtime)
 {
 	struct req	 req;
 	struct kpair	*kpn, *kpd;
-
-	/* Both of these are optional. */
+	time_t		 t;
+	struct tm	 tm;
+	char		 datebuf[32];
 
 	kpn = r->fieldmap[VALID_PROJECT_NAME];
 	kpd = r->fieldmap[VALID_REPORT_CTIME];
+
+	assert(kpn != NULL || kpd != NULL);
 
 	/* Open output page. */
 
@@ -548,7 +785,7 @@ get_last(struct kreq *r, time_t mtime)
 		khtml_puts(&req.html, kpn->parsed.s);
 		khtml_closeelem(&req.html, 1); /* span */
 		khtml_closeelem(&req.html, 1); /* h1 */
-	} else if (kpd != NULL) {
+	} else {
 		khtml_attr(&req.html, KELEM_A,
 			KATTR_HREF, "index.html", KATTR__MAX);
 		khtml_puts(&req.html, "CI Dashboard");
@@ -557,15 +794,14 @@ get_last(struct kreq *r, time_t mtime)
 		khtml_elem(&req.html, KELEM_SPAN);
 		khtml_puts(&req.html, "Date Reports");
 		khtml_closeelem(&req.html, 1); /* span */
-		khtml_closeelem(&req.html, 1); /* h1 */
-	} else {
-		khtml_elem(&req.html, KELEM_SPAN);
-		khtml_puts(&req.html, "CI Dashboard");
-		khtml_closeelem(&req.html, 1); /* span */
 		khtml_ncr(&req.html, 0x203a);
 		khtml_elem(&req.html, KELEM_SPAN);
-		khtml_puts(&req.html, "All Projects");
+		t = kpd->parsed.i;
+		gmtime_r(&t, &tm);
+		strftime(datebuf, sizeof(datebuf), "%F", &tm);
+		khtml_puts(&req.html, datebuf);
 		khtml_closeelem(&req.html, 1); /* span */
+		khtml_closeelem(&req.html, 1); /* h1 */
 	}
 
 	khtml_closeelem(&req.html, 1); /* h1 */
@@ -573,22 +809,23 @@ get_last(struct kreq *r, time_t mtime)
 
 	/* Output data. */
 
-	khtml_attr(&req.html, KELEM_DIV, 
-		KATTR_CLASS, "table", KATTR__MAX);
+	if (kpn != NULL)
+		khtml_attr(&req.html, KELEM_DIV, 
+			KATTR_CLASS, "table projtable", KATTR__MAX);
+	else
+		khtml_attr(&req.html, KELEM_DIV, 
+			KATTR_CLASS, "table datetable", KATTR__MAX);
 	get_html_last_header(&req.html);
 
 	if (kpn != NULL)
 		db_report_iterate_dashname(r->arg, 
 			get_html_last_report, &req,
 			kpn->parsed.s); /* project.name */
-	else if (kpd != NULL)
+	else 
 		db_report_iterate_lastdate(r->arg, 
 			get_html_last_report, &req,
 			kpd->parsed.i, /* ctime ge */
 			kpd->parsed.i + 86400); /* ctime le */
-	else
-		db_report_iterate_dash(r->arg, 
-			get_html_last_report, &req);
 
 	khtml_closeelem(&req.html, 1); /* table */
 	khtml_closeelem(&req.html, 1); /* body */
@@ -605,8 +842,12 @@ get(struct kreq *r, time_t mtime)
 
 	if (r->fieldmap[VALID_REPORT_ID] != NULL)
 		get_single(r, mtime);
-	else
+	else if (r->fieldmap[VALID_PROJECT_NAME] != NULL)
 		get_last(r, mtime);
+	else if (r->fieldmap[VALID_REPORT_CTIME] != NULL)
+		get_last(r, mtime);
+	else
+		get_dash(r, mtime);
 }
 
 /*

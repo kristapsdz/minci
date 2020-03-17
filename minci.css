@@ -38,32 +38,45 @@ div.table > :first-child		{ display: none;
 .lefthead.report-id,
 .lefthead.project-name,
 .lefthead.project-repo,
-.cell.report-id,
-.cell.report-passfail,
-.cell.project-name			{ display: inline-block; }
-.cell.report-system			{ white-space: nowrap;
-					  overflow: hidden;
-					  text-overflow: ellipsis; }
-.cell.report-system			{ display: inline; }
+.row					{ padding: 0.5rem;
+					  white-space: nowrap; 
+					  text-overflow: hidden;
+				  	  overflow: hidden; }
+.cell					{ padding: 0.25rem 0; }
+.head, .cell				{ display: inline-block;
+					  width: 4rem; }
+.cell + .cellgroup,
+.cellgroup + .cell,
+.head + .head, 
+.cell + .cell				{ padding-left: 0.5rem; }
+.head.report-newest,
+.cell.report-newest			{ width: 11rem; }
+.head.report-commit,
+.cell.report-commit			{ width: 6rem; }
+.head.project-name,
+.cell.project-name			{ width: 7rem; }
+.head.report-successrate,
+.cell.report-successrate		{ width: 3rem;	
+	  				  text-align: right; }
+.head.report-passfail,
+.cell.report-passfail			{ width: 0.5rem; }
+.head.report-finished-pct,
+.cell.report-finished-pct		{ text-align: right; }
+.head.report-start,
+.cell.report-start			{ width: 6rem; }
 .lefthead.project-name			{ border-right: thin solid #888;
 					  padding-right: 0.5rem;
 					  margin-right: 0.5rem; }
+.cell.report-commit			{ font-family: monospace;
+					  font-size: 8pt; }
 .lefthead.project-repo::before		{ content: 'repository'; }
 .lefthead.report-id::after,
-.cell.report-start::after,
-.cell.project-name::after,
-.cell.report-id::after			{ content: ', ';
-					  opacity: 0.5;
-					  margin-right: 0.2rem; }
-.lefthead.report-id::before,
-.cell.report-id::before			{ content: '#';
+.cell.report-successrate::after,
+.cell.report-finished-pct::after	{ content: '%';
 					  opacity: 0.5; }
-.row					{ padding: 0.5rem;
-					  white-space: nowrap; 
-				  	  overflow: hidden; 
-				  	  text-overflow: ellipsis; }
-.cell					{ padding: 0.25rem 0; }
-.cell.report-start,
+.report-id::before			{ content: '#';
+					  opacity: 0.5; }
+.report-start,
 .cellgroup				{ display: none; }
 .cellgroup .cell			{ flex: 1; }
 .cellgroup .cell::before		{ display: block;
@@ -85,6 +98,7 @@ div.table > :first-child		{ display: none;
 					  margin: 0.5rem 0;
 					  font-size: 8pt;
 					  text-overflow: ellipsis; }
+.lefthead.report-system-ext		{ opacity: 0.7; }
 .lefthead.report-env::before		{ content: 'Env: '; }
 .lefthead.report-deps::before		{ content: 'Deps: '; }
 .lefthead.report-build::before		{ content: 'Build: '; }
@@ -97,6 +111,9 @@ div.table > :first-child		{ display: none;
 					  text-align: right;
 					  display: inline-block;
 					  padding-right: 0.25rem; }
+.report-pending				{ text-align: center; }
+.report-pending > :first-child::after	{ content: ':';
+					  opacity: 0.5; }
 .report-failure::before			{ content: 'Report failure.';
 					  color: red; }
 .report-success::before			{ content: 'Report success.';
@@ -112,21 +129,12 @@ div.table > :first-child		{ display: none;
   div.table > :first-child,
   .row					{ display: flex;
 	  			  	  padding: 0; }
-  .head, .cell				{ width: 4rem;
-					  padding: 0.5rem 1rem; }
-  .head.report-passfail,
-  .cell.report-passfail			{ width: 0.5rem; }
-  .head.project-name,
-  .cell.project-name			{ width: 8rem; }
-  .head.report-start,
-  .cell.report-start			{ width: 6rem; }
-  .cell.report-start			{ display: inline-block; }
+  .head, .cell				{ padding: 0.5rem 1rem; }
+  .report-start				{ display: inline-block; }
   .report-system			{ flex: 1; }
-  .cell.report-start::after,
-  .cell.project-name::after,
-  .cell.report-id::after		{ content: none;
-					  margin-right: 0; }
   .head.project-name::before		{ content: 'project'; }
+  .head.report-finished-pct::before	{ content: 'fresh'; }
+  .head.report-pending::before		{ content: 'wait'; }
   .head.report-start::before		{ content: 'date'; }
   .head.report-env::before		{ content: 'env'; }
   .head.report-deps::before		{ content: 'deps'; }
@@ -134,7 +142,9 @@ div.table > :first-child		{ display: none;
   .head.report-regress::before		{ content: 'test'; }
   .head.report-install::before		{ content: 'install'; }
   .head.report-dist::before		{ content: 'check'; }
+  .head.report-commit::before		{ content: 'commit'; }
   .head.report-system::before		{ content: 'system'; }
+  .head.report-newest::before		{ content: 'latest (GMT)'; }
   .cellgroup				{ display: flex; }
 }
 
@@ -151,3 +161,6 @@ div.table > :first-child		{ display: none;
   .cellgroup .cell span::after		{ color: rgb(255, 50, 50); }
   .report-log				{ background-color: #000; }
 }
+
+.projtable .project-name		{ display: none; }
+.datetable .report-start		{ display: none; }
