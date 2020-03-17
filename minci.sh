@@ -4,6 +4,7 @@
 # minci.sh [-fnv] [repo...]
 # Use ~/.minci or /etc/minci for configuration, whichever comes first.
 
+VERSION="@VERSION@"
 MAKE="make"
 API_SECRET=
 DEP_BINS="mandoc openssl git curl"

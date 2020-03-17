@@ -1,5 +1,5 @@
+VERSION		 = 0.2.0
 WWWPREFIX	 = /var/www/vhosts/kristaps.bsd.lv
-PREFIX		 = /usr/local
 DATADIR		 = /vhosts/kristaps.bsd.lv/data
 
 CFLAGS	  	+= -g -W -Wall -Wextra -Wmissing-prototypes
@@ -13,11 +13,7 @@ LDADD		+= $(LIBS_PKG)
 
 OBJS 		 = db.o main.o
 
-all: minci.cgi
-
-install: all
-	mkdir -p $(PREFIX)/bin
-	install -m 0555 minci.sh $(PREFIX)/bin
+all: minci.cgi minci
 
 installcgi: updatecgi
 	mkdir -p $(WWWPREFIX)/data
@@ -39,8 +35,11 @@ updatedb:
 minci.cgi: $(OBJS) minci.db
 	$(CC) -o $@ -static $(OBJS) $(LDFLAGS) $(LDADD)
 
+minci: minci.sh
+	sed "s!@VERSION@!$(VERSION)!g" minci.sh >$@
+
 clean:
-	rm -f $(OBJS) minci.cgi db.c extern.h minci.db db.sql
+	rm -f $(OBJS) minci.cgi db.c extern.h minci.db db.sql minci
 
 $(OBJS): extern.h
 
