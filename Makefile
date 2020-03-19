@@ -26,7 +26,7 @@ updatecgi: all
 	install -o www -m 0500 minci.cgi $(WWWPREFIX)/cgi-bin
 
 testupdatedb:
-	ort-sqldiff $(PREFIX)/data/minci.ort db.ort || true
+	ort-sqldiff $(WWWPREFIX)/data/minci.ort db.ort || true
 
 updatedb:
 	mkdir -p $(WWWPREFIX)/data

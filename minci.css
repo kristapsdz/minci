@@ -35,9 +35,6 @@ div.table > :first-child		{ display: none;
 					  color: #fff; }
 .report-pass				{ color: green; }
 .report-fail				{ color: red; }
-.lefthead.report-id,
-.lefthead.project-name,
-.lefthead.project-repo,
 .row					{ padding: 0.5rem;
 					  white-space: nowrap; 
 					  text-overflow: hidden;
@@ -58,25 +55,24 @@ div.table > :first-child		{ display: none;
 .head.report-successrate,
 .cell.report-successrate		{ width: 3rem;	
 	  				  text-align: right; }
+.head.report-commit,
+.cell.report-commit			{ display: none; }
 .head.report-passfail,
 .cell.report-passfail			{ width: 0.5rem; }
 .head.report-finished-pct,
 .cell.report-finished-pct		{ text-align: right; }
 .head.report-start,
 .cell.report-start			{ width: 6rem; }
-.lefthead.project-name			{ border-right: thin solid #888;
-					  padding-right: 0.5rem;
-					  margin-right: 0.5rem; }
+.lefthead.report-commit,
 .cell.report-commit			{ font-family: monospace;
 					  font-size: 8pt; }
-.lefthead.project-repo::before		{ content: 'repository'; }
-.lefthead.report-id::after,
 .cell.report-successrate::after,
 .cell.report-finished-pct::after	{ content: '%';
 					  opacity: 0.5; }
+.lefthead.project-name::after,
+.lefthead.report-id::after		{ content: ','; }
 .report-id::before			{ content: '#';
 					  opacity: 0.5; }
-.report-start,
 .cellgroup				{ display: none; }
 .cellgroup .cell			{ flex: 1; }
 .cellgroup .cell::before		{ display: block;
@@ -99,6 +95,8 @@ div.table > :first-child		{ display: none;
 					  font-size: 8pt;
 					  text-overflow: ellipsis; }
 .lefthead.report-system-ext		{ opacity: 0.7; }
+.lefthead.project-name			{ padding: 0 0.3rem; }
+.lefthead.project-repo::before		{ content: 'commit:'; }
 .lefthead.report-env::before		{ content: 'Env: '; }
 .lefthead.report-deps::before		{ content: 'Deps: '; }
 .lefthead.report-build::before		{ content: 'Build: '; }
@@ -130,8 +128,9 @@ div.table > :first-child		{ display: none;
   .row					{ display: flex;
 	  			  	  padding: 0; }
   .head, .cell				{ padding: 0.5rem 1rem; }
-  .report-start				{ display: inline-block; }
   .report-system			{ flex: 1; }
+  .head.report-commit,
+  .cell.report-commit			{ display: inline-block; }
   .head.project-name::before		{ content: 'project'; }
   .head.report-finished-pct::before	{ content: 'fresh'; }
   .head.report-pending::before		{ content: 'wait'; }
@@ -163,4 +162,5 @@ div.table > :first-child		{ display: none;
 }
 
 .projtable .project-name		{ display: none; }
+.unametable .report-system		{ display: none; }
 .datetable .report-start		{ display: none; }

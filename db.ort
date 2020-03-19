@@ -100,6 +100,10 @@ struct report {
 	field unamehash text limit eq 32
 		comment "Hash of uname[mnrsv].  This is used to quickly
 			 establish a kind of machine identity.";
+	field projunamehash text limit eq 32 default ""
+		comment "Hash of uname[mnrsv] and project identifier.  This is
+			 used to group recent submissions from a given machine
+			 for a given project.";
 	field fetchhead text limit le 40 default ""
 		comment "Git hash for branch master.  May be empty.";
 			 
@@ -109,16 +113,18 @@ struct report {
 	insert;
 
 	iterate ctime ge, ctime le: limit 50 name lastdate order ctime desc;
+	iterate project.name: name dashname order ctime desc grouprow projunamehash maxrow ctime;
+	iterate unamehash: name dashuname order ctime desc grouprow projunamehash maxrow ctime;
 
-	list: name dash order projectid,ctime desc grouprow unamehash maxrow ctime;
-	iterate project.name: name dashname order ctime desc grouprow unamehash maxrow ctime;
+	list: name dash order projectid,ctime desc grouprow projunamehash maxrow ctime;
 
 	search id: name byid;
 
 	roles consumer {
 		list dash;
-		iterate lastdate;
 		iterate dashname;
+		iterate dashuname;
+		iterate lastdate;
 		noexport userid;
 		search byid;
 	};
