@@ -255,11 +255,14 @@ do
 			if [ -z "$NOOP" ]
 			then
 				cd "$reponame"
-				FETCH_HEAD=$(cut -f1 .git/FETCH_HEAD | head -1) || FETCH_HEAD=""
 			fi
 			# Grabs the newest .git/FETCH_HEAD.
 			run "git fetch origin" "$reponame" || break
 			run "git reset --hard origin/master" "$reponame" || break
+			if [ -z "$NOOP" ]
+			then
+				FETCH_HEAD=$(cut -f1 .git/FETCH_HEAD | head -1) || FETCH_HEAD=""
+			fi
 		fi
 
 		# If the FETCH_HEAD commit doesn't change when we freshen the
