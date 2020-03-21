@@ -12,6 +12,7 @@ DEP_BINS="mandoc openssl git curl"
 NOOP=
 LOG=
 VERBOSE=
+MINCI_REPO="https://github.com/kristapsdz/minci"
 AUTOUP=1
 API_KEY=
 SERVER=
@@ -154,7 +155,7 @@ debug "using server: $SERVER"
 
 for dep in $DEP_BINS
 do
-	debug "$0: check binary dependency: $dep"
+	debug "check binary dependency: $dep"
 	which "$dep" 2>/dev/null 1>&2
 	if [ $? -ne 0 ]
 	then
@@ -205,7 +206,7 @@ then
 			FETCH_HEAD="$(cut -f1 .git/FETCH_HEAD | head -1)"
 		fi
 	else
-		runnolog "git clone $repo"
+		runnolog "git clone $MINCI_REPO"
 		if [ -z "$NOOP" ]
 		then
 			cd "minci"
