@@ -346,8 +346,7 @@ do
 		# If the FETCH_HEAD commit doesn't change when we freshen the
 		# repository, then doing re-test it unless -f was passed.
 
-		if [ -z "$FORCE" -a -n "$head" -a \
-		     -a "$head" = "$FETCH_HEAD" ]
+		if [ -z "$FORCE" -a -n "$head" -a "$head" = "$FETCH_HEAD" ]
 		then
 			debug "repository is fresh: $reponame"
 			TIME_start=0
