@@ -12,6 +12,7 @@ DEP_BINS="mandoc openssl git curl"
 NOOP=
 LOG=
 VERBOSE=
+AUTOUP=1
 API_KEY=
 SERVER=
 STAGING="$HOME/.local/cache/minci"
@@ -160,7 +161,73 @@ then
 	then
 		fatal "could not create: $STAGING"
 	fi
-	debug "created: $STAGING"
+ 	debug "created: $STAGING"
+fi
+
+# Auto-update feature.
+# FIXME: NOT FOR PERMANENT USE.
+# This will eventually be replaced by a real package manager, but for
+# now I'm using this because it lets me update hosts without needing to
+# do it manually for each one.
+
+if [ -n "$AUTOUP" ]
+then
+	# Same way as we'll use for repositories later on.
+
+	set -e
+	FETCH_HEAD=
+	head=
+
+	[ -n "$NOOP" ] || cd "$STAGING"
+	if [ -d "minci" ]
+	then
+		if [ -z "$NOOP" ]
+		then
+			cd "minci"
+			head="$(cut -f1 .git/FETCH_HEAD 2>/dev/null | head -1)"
+		fi
+		run "git fetch origin" "minci" || break
+		run "git reset --hard origin/master" "minci" || break
+		run "git clean -fdx" "minci" || break
+		if [ -z "$NOOP" ]
+		then
+			FETCH_HEAD="$(cut -f1 .git/FETCH_HEAD | head -1)"
+		fi
+	else
+		run "git clone $repo" "minci" || break
+		if [ -z "$NOOP" ]
+		then
+			cd "minci"
+		fi
+		# Grabs the newest .git/FETCH_HEAD.
+		run "git fetch origin" "minci" || break
+		run "git reset --hard origin/master" "minci" || break
+		if [ -z "$NOOP" ]
+		then
+			FETCH_HEAD="$(cut -f1 .git/FETCH_HEAD | head -1)"
+		fi
+	fi
+
+	# If up to date, fine.
+	# If not, install the new script then exit.
+	# We'll reinvoke later (we're probably being run from cron) with
+	# the new version.
+
+	if [ -n "$head" -a "$head" = "$FETCH_HEAD" ]
+	then
+		debug "installation is fresh: minci"
+	else
+		debug "installation is not fresh: minci"
+		debug "installing new script and exiting"
+		if [ -z "$NOOP" ]
+		then
+			run "install -m 0755 minci.sh $HOME/bin" "minci" || exit 1
+		fi
+		msg "updated binary: now at commit $FETCH_HEAD"
+		exit 0
+	fi
+
+	set +e
 fi
 
 # Process each repository line.
@@ -229,8 +296,8 @@ do
 
 	while :
 	do
-		head=""
-		FETCH_HEAD=""
+		head=
+		FETCH_HEAD=
 
 		# If we have a repository already, update and clean it
 		# out; otherwise, clone it afresh.
@@ -241,14 +308,14 @@ do
 			if [ -z "$NOOP" ]
 			then
 				cd "$reponame"
-				head=$(cut -f1 .git/FETCH_HEAD 2>/dev/null | head -1) || head=""
+				head="$(cut -f1 .git/FETCH_HEAD 2>/dev/null | head -1)"
 			fi
 			run "git fetch origin" "$reponame" || break
 			run "git reset --hard origin/master" "$reponame" || break
 			run "git clean -fdx" "$reponame" || break
 			if [ -z "$NOOP" ]
 			then
-				FETCH_HEAD=$(cut -f1 .git/FETCH_HEAD | head -1) || FETCH_HEAD=""
+				FETCH_HEAD="$(cut -f1 .git/FETCH_HEAD | head -1)"
 			fi
 		else
 			run "git clone $repo" "$reponame" || break
@@ -261,7 +328,7 @@ do
 			run "git reset --hard origin/master" "$reponame" || break
 			if [ -z "$NOOP" ]
 			then
-				FETCH_HEAD=$(cut -f1 .git/FETCH_HEAD | head -1) || FETCH_HEAD=""
+				FETCH_HEAD="$(cut -f1 .git/FETCH_HEAD | head -1)"
 			fi
 		fi
 
@@ -269,7 +336,7 @@ do
 		# repository, then doing re-test it unless -f was passed.
 
 		if [ -z "$FORCE" -a -n "$head" -a \
-		     -n "$FETCH_HEAD" -a "$head" = "$FETCH_HEAD" ]
+		     -a "$head" = "$FETCH_HEAD" ]
 		then
 			debug "repository is fresh: $reponame"
 			TIME_start=0
