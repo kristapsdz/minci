@@ -400,7 +400,7 @@ get_single_html(struct kreq *r, const struct report *p)
 		KATTR_CLASS, "singleton", KATTR__MAX);
 	khtml_attr(&req, KELEM_A, 
 		KATTR_HREF, "index.html", KATTR__MAX);
-	khtml_puts(&req, "CI Dashboard");
+	khtml_puts(&req, "Dashboard");
 	khtml_closeelem(&req, 1); /* a */
 	khtml_ncr(&req, 0x203a);
 	khtml_elem(&req, KELEM_SPAN);
@@ -531,6 +531,12 @@ get_single_html(struct kreq *r, const struct report *p)
 	}
 
 	khtml_closeelem(&req, 1); /* div */
+	khtml_elem(&req, KELEM_FOOTER);
+	khtml_attr(&req, KELEM_A,
+		KATTR_HREF, REPO_BASE "/minci", KATTR__MAX);
+	khtml_puts(&req, "minci");
+	khtml_closeelem(&req, 1); /* a */
+	khtml_closeelem(&req, 1); /* footer */
 	khtml_closeelem(&req, 1); /* body */
 	khtml_closeelem(&req, 1); /* html */
 	khtml_close(&req);
@@ -611,7 +617,7 @@ get_dash(struct kreq *r, time_t mtime)
 		KATTR_CLASS, "table", KATTR__MAX);
 
 	khtml_elem(&req.html, KELEM_SPAN);
-	khtml_puts(&req.html, "CI Dashboard");
+	khtml_puts(&req.html, "Dashboard");
 	khtml_closeelem(&req.html, 1); /* span */
 	khtml_ncr(&req.html, 0x203a);
 	khtml_elem(&req.html, KELEM_SPAN);
@@ -771,6 +777,12 @@ get_dash(struct kreq *r, time_t mtime)
 	}
 
 	khtml_closeelem(&req.html, 1); /* table */
+	khtml_elem(&req.html, KELEM_FOOTER);
+	khtml_attr(&req.html, KELEM_A,
+		KATTR_HREF, REPO_BASE "/minci", KATTR__MAX);
+	khtml_puts(&req.html, "minci");
+	khtml_closeelem(&req.html, 1); /* a */
+	khtml_closeelem(&req.html, 1); /* footer */
 	khtml_closeelem(&req.html, 1); /* body */
 	khtml_closeelem(&req.html, 1); /* html */
 	khtml_close(&req.html);
@@ -814,12 +826,8 @@ get_last(struct kreq *r, time_t mtime)
 	if (kpn != NULL) {
 		khtml_attr(&req.html, KELEM_A,
 			KATTR_HREF, "index.html", KATTR__MAX);
-		khtml_puts(&req.html, "CI Dashboard");
+		khtml_puts(&req.html, "Dashboard");
 		khtml_closeelem(&req.html, 1); /* a */
-		khtml_ncr(&req.html, 0x203a);
-		khtml_elem(&req.html, KELEM_SPAN);
-		khtml_puts(&req.html, "Project Dashboard");
-		khtml_closeelem(&req.html, 1); /* span */
 		khtml_ncr(&req.html, 0x203a);
 		khtml_elem(&req.html, KELEM_SPAN);
 		khtml_puts(&req.html, kpn->parsed.s);
@@ -828,7 +836,7 @@ get_last(struct kreq *r, time_t mtime)
 	} else if (kph != NULL) {
 		khtml_attr(&req.html, KELEM_A,
 			KATTR_HREF, "index.html", KATTR__MAX);
-		khtml_puts(&req.html, "CI Dashboard");
+		khtml_puts(&req.html, "Dashboard");
 		khtml_closeelem(&req.html, 1); /* a */
 		khtml_ncr(&req.html, 0x203a);
 		khtml_elem(&req.html, KELEM_SPAN);
@@ -838,12 +846,8 @@ get_last(struct kreq *r, time_t mtime)
 	} else {
 		khtml_attr(&req.html, KELEM_A,
 			KATTR_HREF, "index.html", KATTR__MAX);
-		khtml_puts(&req.html, "CI Dashboard");
+		khtml_puts(&req.html, "Dashboard");
 		khtml_closeelem(&req.html, 1); /* a */
-		khtml_ncr(&req.html, 0x203a);
-		khtml_elem(&req.html, KELEM_SPAN);
-		khtml_puts(&req.html, "Date Reports");
-		khtml_closeelem(&req.html, 1); /* span */
 		khtml_ncr(&req.html, 0x203a);
 		khtml_elem(&req.html, KELEM_SPAN);
 		t = kpd->parsed.i;
@@ -885,6 +889,12 @@ get_last(struct kreq *r, time_t mtime)
 			kpd->parsed.i + 86400); /* ctime le */
 
 	khtml_closeelem(&req.html, 1); /* table */
+	khtml_elem(&req.html, KELEM_FOOTER);
+	khtml_attr(&req.html, KELEM_A,
+		KATTR_HREF, REPO_BASE "/minci", KATTR__MAX);
+	khtml_puts(&req.html, "minci");
+	khtml_closeelem(&req.html, 1); /* a */
+	khtml_closeelem(&req.html, 1); /* footer */
 	khtml_closeelem(&req.html, 1); /* body */
 	khtml_closeelem(&req.html, 1); /* html */
 	khtml_close(&req.html);

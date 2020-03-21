@@ -15,6 +15,9 @@ body > header				{ position: fixed;
 					  width: 100%; }
 body > header a				{ color: #fff;
 					  text-decoration: none; }
+footer					{ text-align: center;
+					  padding: 1rem 0;
+					  font-size: smaller; }
 .table					{ width: 100%; 
 					  max-width: 88rem;
 					  margin-right: auto;
