@@ -13,7 +13,7 @@ LDADD		+= $(LIBS_PKG)
 
 OBJS 		 = db.o main.o
 
-all: minci.cgi minci
+all: minci.cgi
 
 installcgi: updatecgi
 	mkdir -p $(WWWPREFIX)/data
@@ -38,11 +38,8 @@ updatedb:
 minci.cgi: $(OBJS) minci.db
 	$(CC) -o $@ -static $(OBJS) $(LDFLAGS) $(LDADD)
 
-minci: minci.sh
-	sed "s!@VERSION@!$(VERSION)!g" minci.sh >$@
-
 clean:
-	rm -f $(OBJS) minci.cgi db.c extern.h minci.db db.sql minci
+	rm -f $(OBJS) minci.cgi db.c extern.h minci.db db.sql
 
 $(OBJS): extern.h
 
