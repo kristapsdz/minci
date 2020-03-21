@@ -43,7 +43,7 @@ run()
 	if [ -z "$NOOP" ]
 	then
 		echo "$PROGNAME: $1: $2" 1>&3
-		$1 1>&3 2>&3 || return 1
+		eval "$1" 1>&3 2>&3 || return 1
 	fi
 	return 0
 }
@@ -274,6 +274,45 @@ do
 			debug "repository is fresh: $reponame"
 			TIME_start=0
 			break
+		fi
+
+		# Dependencies.
+		# For each "dep" line, make sure the library exists.
+
+		if [ -r "minci.cfg" ]
+		then
+			debug "processing dependencies: $reponame"
+			name=
+			while read -r depln
+			do
+				dep="$(echo "$depln" | sed -n 's!^[ ]*dep[ ]*=[ ]*!!p')"
+				[ -z "$dep" ] && continue
+
+				# Parse the package name and the
+				# inequality that follows, which can of
+				# course be empty for an existence check
+				# or '>=' or '>'.
+
+				name="$(echo "$dep" | sed -e 's![ >=].*$!!')"
+				ineq="$(echo "$dep" | sed -e 's!^[^>=]*!!')"
+
+				if [ -z "$ineq" ]
+				then
+					run "pkg-config \"$name\"" "$reponame" || break
+				elif [ -z "$(echo "$ineq" | sed -e 's!^>=.*$!!')" ]
+				then
+					ineq="$(echo "$ineq" | sed -e 's!^>=[ ]*!!')"
+					run "pkg-config --atleast-version \"$ineq\" \"$name\"" "$reponame" || break
+				elif [ -z "$(echo "$ineq" | sed -e 's!=.*$!!')" ]
+				then
+					ineq="$(echo "$ineq" | sed -e 's!^=[ ]*!!')"
+					run "pkg-config --exact-version \"$ineq\" \"$name\"" "$reponame" || break
+				else
+					fatal "bad version line: $dep"
+				fi
+				name=
+			done < "minci.cfg"
+			[ -z "$name" ] || break
 		fi
 
 		# Run ./configure, make, make regress, make install,
