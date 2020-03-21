@@ -55,7 +55,7 @@ runnolog()
 	debug "$1"
 	if [ -z "$NOOP" ]
 	then
-		eval "$1" || exit 1
+		eval "$1" >/dev/null 2>&1 || exit 1
 	fi
 }
 
