@@ -4,7 +4,6 @@ body					{ font-family: sans-serif;
 					  padding-bottom: 1rem;
 					  position: relative; }
 a					{ color: blue; }
-a:visited				{ color: rgb(100, 100, 255); }
 body > header				{ position: fixed;
 					  top: 0;
 					  left: 0;
@@ -42,6 +41,7 @@ div.table > :first-child		{ display: none;
 					  white-space: nowrap; 
 					  text-overflow: hidden;
 				  	  overflow: hidden; }
+.row.notnewest				{ opacity: 0.5; }
 .cell					{ padding: 0.25rem 0; }
 .head, .cell				{ display: inline-block;
 					  width: 4rem; }
@@ -155,7 +155,6 @@ div.table > :first-child		{ display: none;
 					  color: #eee; }
   div.table > :nth-child(odd)		{ background-color: #6d6d6d; }
   a					{ color: yellow; }
-  a:visited				{ color: rgb(255, 255, 180); }
   .report-pass,
   .report-success::before		{ color: rgb(50, 255, 50); }
   .report-fail,
