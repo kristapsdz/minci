@@ -49,6 +49,16 @@ run()
 	return 0
 }
 
+# Run $1, exiting on failure.
+runnolog()
+{
+	debug "$1"
+	if [ -z "$NOOP" ]
+	then
+		eval "$1" || exit 1
+	fi
+}
+
 args=$(getopt fnv $*)
 if [ $? -ne 0 ]
 then
@@ -174,6 +184,7 @@ if [ -n "$AUTOUP" ]
 then
 	# Same way as we'll use for repositories later on.
 
+	debug "checking auto-up status"
 	set -e
 	FETCH_HEAD=
 	head=
@@ -186,22 +197,22 @@ then
 			cd "minci"
 			head="$(cut -f1 .git/FETCH_HEAD 2>/dev/null | head -1)"
 		fi
-		run "git fetch origin" "minci" || break
-		run "git reset --hard origin/master" "minci" || break
-		run "git clean -fdx" "minci" || break
+		runnolog "git fetch origin"
+		runnolog "git reset --hard origin/master"
+		runnolog "git clean -fdx"
 		if [ -z "$NOOP" ]
 		then
 			FETCH_HEAD="$(cut -f1 .git/FETCH_HEAD | head -1)"
 		fi
 	else
-		run "git clone $repo" "minci" || break
+		runnolog "git clone $repo"
 		if [ -z "$NOOP" ]
 		then
 			cd "minci"
 		fi
 		# Grabs the newest .git/FETCH_HEAD.
-		run "git fetch origin" "minci" || break
-		run "git reset --hard origin/master" "minci" || break
+		runnolog "git fetch origin"
+		runnolog "git reset --hard origin/master"
 		if [ -z "$NOOP" ]
 		then
 			FETCH_HEAD="$(cut -f1 .git/FETCH_HEAD | head -1)"
@@ -221,7 +232,7 @@ then
 		debug "installing new script and exiting"
 		if [ -z "$NOOP" ]
 		then
-			run "install -m 0755 minci.sh $HOME/bin" "minci" || exit 1
+			runnolog "install -m 0755 minci.sh $HOME/bin"
 		fi
 		msg "updated binary: now at commit $FETCH_HEAD"
 		exit 0
