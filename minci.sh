@@ -9,7 +9,6 @@ API_SECRET=
 DEP_BINS="mandoc openssl git curl"
 # TODO: make sqlite3 be per-system.
 NOOP=
-LOG=
 VERBOSE=
 MINCI_REPO="https://github.com/kristapsdz/minci"
 AUTOUP=1
@@ -164,7 +163,7 @@ done
 
 # Check or create where we'll put our repositories.
 
-if [ ! -d "$STAGING" -a -z "$NOOP" ]
+if [ ! -d "$STAGING" ] && [ -z "$NOOP" ]
 then
 	mkdir -p "$STAGING"
 	if [ $? -ne 0 ]
@@ -186,8 +185,8 @@ then
 
 	debug "checking auto-up status"
 	set -e
-	FETCH_HEAD=
-	head=
+	FETCH_HEAD=""
+	head=""
 
 	[ -n "$NOOP" ] || cd "$STAGING"
 	if [ -d "minci" ]
@@ -224,11 +223,13 @@ then
 	# We'll reinvoke later (we're probably being run from cron) with
 	# the new version.
 
-	if [ -n "$head" -a "$head" = "$FETCH_HEAD" ]
+	if [ -n "$head" ] && [ "$head" = "$FETCH_HEAD" ]
 	then
 		debug "installation is fresh: minci"
 	else
 		debug "installation is not fresh: minci"
+		debug "previous: $head"
+		debug "current:  $FETCH_HEAD"
 		debug "installing new script and exiting"
 		if [ -z "$NOOP" ]
 		then
@@ -243,11 +244,12 @@ fi
 
 # Process each repository line.
 
+NPROC=0
 while read -r ln
 do
-	repo="$(echo $ln | sed -n 's!^[ ]*repo[ ]*=[ ]*!!p')"
+	repo="$(echo "$ln" | sed -n 's!^[ ]*repo[ ]*=[ ]*!!p')"
 	[ -z "$repo" ] && continue
-	reponame="$(echo $repo | sed -e 's!.*/!!' -e 's!\.git$!!')"
+	reponame="$(echo "$repo" | sed -e 's!.*/!!' -e 's!\.git$!!')"
 	if [ -z "$reponame" ]
 	then
 		fatal "malformed repo: $repo"
@@ -297,7 +299,7 @@ do
 
 	# Set our last-commit checksum to be empty as well.
 
-	FETCH_HEAD=
+	FETCH_HEAD=""
 
 	# Begin processing.
 	# This is wrapped in an infinite loop so we can just use `break`
@@ -307,8 +309,8 @@ do
 
 	while :
 	do
-		head=
-		FETCH_HEAD=
+		head=""
+		FETCH_HEAD=""
 
 		# If we have a repository already, update and clean it
 		# out; otherwise, clone it afresh.
@@ -346,7 +348,7 @@ do
 		# If the FETCH_HEAD commit doesn't change when we freshen the
 		# repository, then doing re-test it unless -f was passed.
 
-		if [ -z "$FORCE" -a -n "$head" -a "$head" = "$FETCH_HEAD" ]
+		if [ -z "$FORCE" ] && [ -n "$head" ] && [ "$head" = "$FETCH_HEAD" ]
 		then
 			debug "repository is fresh: $reponame"
 			TIME_start=0
@@ -428,6 +430,8 @@ do
 		[ -n "$NOOP" ] || rm -f /tmp/minci.log
 		continue
 	fi
+	
+	NPROC=$(( $NPROC + 1 ))
 
 	if [ $TIME_distcheck -eq 0 ]
 	then
@@ -516,5 +520,10 @@ do
 		rm -f /tmp/minci.log
 	fi
 done < "$CONFIG"
+
+if [ $NPROC -eq 0 ]
+then
+	msg "all repositories up to date"
+fi
 
 exit 0
