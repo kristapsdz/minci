@@ -375,19 +375,37 @@ do
 				name="$(echo "$dep" | sed -e 's![ >=].*$!!')"
 				ineq="$(echo "$dep" | sed -e 's!^[^>=]*!!')"
 
-				if [ -z "$ineq" ]
+				# libcurl behaves differently because it uses
+				# curl-config instead of pkg-config.
+				# It also doesn't allow for exact version.
+
+				if [ "$name" = "libcurl" ]
 				then
-					run "pkg-config \"$name\"" "$reponame" || break
-				elif [ -z "$(echo "$ineq" | sed -e 's!^>=.*$!!')" ]
-				then
-					ineq="$(echo "$ineq" | sed -e 's!^>=[ ]*!!')"
-					run "pkg-config --atleast-version \"$ineq\" \"$name\"" "$reponame" || break
-				elif [ -z "$(echo "$ineq" | sed -e 's!=.*$!!')" ]
-				then
-					ineq="$(echo "$ineq" | sed -e 's!^=[ ]*!!')"
-					run "pkg-config --exact-version \"$ineq\" \"$name\"" "$reponame" || break
+					if [ -z "$ineq" ]
+					then
+						run "which curl-config" "$reponame" || break
+					elif [ -z "$(echo "$ineq" | sed -e 's!^>=.*$!!')" ]
+					then
+						ineq="$(echo "$ineq" | sed -e 's!^>=[ ]*!!')"
+						run "curl-config --checkfor \"$ineq\"" "$reponame" || break
+					else
+						fatal "bad version line: $dep"
+					fi
 				else
-					fatal "bad version line: $dep"
+					if [ -z "$ineq" ]
+					then
+						run "pkg-config \"$name\"" "$reponame" || break
+					elif [ -z "$(echo "$ineq" | sed -e 's!^>=.*$!!')" ]
+					then
+						ineq="$(echo "$ineq" | sed -e 's!^>=[ ]*!!')"
+						run "pkg-config --atleast-version \"$ineq\" \"$name\"" "$reponame" || break
+					elif [ -z "$(echo "$ineq" | sed -e 's!=.*$!!')" ]
+					then
+						ineq="$(echo "$ineq" | sed -e 's!^=[ ]*!!')"
+						run "pkg-config --exact-version \"$ineq\" \"$name\"" "$reponame" || break
+					else
+						fatal "bad version line: $dep"
+					fi
 				fi
 				name=
 			done < "minci.cfg"
