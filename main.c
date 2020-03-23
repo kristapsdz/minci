@@ -616,7 +616,7 @@ get_dash(struct kreq *r, time_t mtime)
 	struct report_q	*rq;
 	struct report	*rn;
 	struct dash	*dash = NULL, *curdash;
-	size_t		 i, dashsz = 0;
+	size_t		 i, dashsz = 0, maxdone = 0;
 	struct tm	 tm;
 	char		*urlproj, *urlcommit;
 	char		 datebuf[32], commitshort[8];
@@ -687,7 +687,8 @@ get_dash(struct kreq *r, time_t mtime)
 		assert(i < dashsz);
 		if (dash[i].nhash[0] != '\0' &&
 		    strcmp(rn->fetchhead, dash[i].nhash) == 0) {
-			dash[i].finished++;
+			if (++dash[i].finished > maxdone)
+				maxdone = dash[i].finished;
 			dash[i].success += rn->distcheck != 0;
 		} else {
 			dash[i].pending++;
@@ -758,18 +759,13 @@ get_dash(struct kreq *r, time_t mtime)
 
 		khtml_attr(&req, KELEM_DIV, KATTR_CLASS, 
 			"cell report-finished-pct", KATTR__MAX);
-		khtml_int(&req, floor(100 * dash[i].finished / 
-		          (dash[i].finished + dash[i].pending)));
+		khtml_int(&req, floor
+			(100 * dash[i].finished / maxdone));
 		khtml_closeelem(&req, 1); /* cell */
 
 		khtml_attr(&req, KELEM_DIV, KATTR_CLASS, 
 			"cell report-pending", KATTR__MAX);
-		khtml_elem(&req, KELEM_SPAN);
 		khtml_int(&req, dash[i].finished);
-		khtml_closeelem(&req, 1); /* span */
-		khtml_elem(&req, KELEM_SPAN);
-		khtml_int(&req, dash[i].pending);
-		khtml_closeelem(&req, 1); /* span */
 		khtml_closeelem(&req, 1); /* cell */
 
 		khtml_attr(&req, KELEM_DIV, KATTR_CLASS, 

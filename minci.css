@@ -101,7 +101,7 @@ div.table > :first-child		{ display: none;
 .lefthead.project-name			{ padding: 0 0.3rem; }
 .lefthead.project-repo::before		{ content: 'commit:'; }
 .lefthead.report-env::before		{ content: 'Env: '; }
-.lefthead.report-deps::before		{ content: 'Deps: '; }
+.lefthead.report-deps::before		{ content: 'Config: '; }
 .lefthead.report-build::before		{ content: 'Build: '; }
 .lefthead.report-regress::before	{ content: 'Test: '; }
 .lefthead.report-install::before	{ content: 'Install: '; }
@@ -113,8 +113,6 @@ div.table > :first-child		{ display: none;
 					  display: inline-block;
 					  padding-right: 0.25rem; }
 .report-pending				{ text-align: center; }
-.report-pending > :first-child::after	{ content: ':';
-					  opacity: 0.5; }
 .report-failure::before			{ content: 'Report failure.';
 					  color: red; }
 .report-success::before			{ content: 'Report success.';
@@ -136,10 +134,10 @@ div.table > :first-child		{ display: none;
   .cell.report-commit			{ display: inline-block; }
   .head.project-name::before		{ content: 'project'; }
   .head.report-finished-pct::before	{ content: 'fresh'; }
-  .head.report-pending::before		{ content: 'wait'; }
+  .head.report-pending::before		{ content: 'done'; }
   .head.report-start::before		{ content: 'date'; }
   .head.report-env::before		{ content: 'env'; }
-  .head.report-deps::before		{ content: 'deps'; }
+  .head.report-deps::before		{ content: 'config'; }
   .head.report-build::before		{ content: 'build'; }
   .head.report-regress::before		{ content: 'test'; }
   .head.report-install::before		{ content: 'install'; }
