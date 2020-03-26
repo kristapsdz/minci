@@ -418,6 +418,7 @@ get_single_html(struct kreq *r, const struct report *p)
 		p->unamehash, NULL);
 
 	khtml_open(&req, r, 0);
+	kcgi_writer_disable(r);
 	html_open(&req, "Report");
 
 	/* Heading. */
@@ -625,6 +626,7 @@ get_dash(struct kreq *r, time_t mtime)
 
 	http_open(r, KHTTP_200, r->mime, mtime);
 	khtml_open(&req, r, 0);
+	kcgi_writer_disable(r);
 	html_open(&req, "Reports");
 
 	/* Output header. */
@@ -830,6 +832,7 @@ get_last(struct kreq *r, time_t mtime)
 	http_open(r, KHTTP_200, r->mime, mtime);
 	req.r = r;
 	khtml_open(&req.html, r, 0);
+	kcgi_writer_disable(r);
 	html_open(&req.html, "Reports");
 
 	/* Output header. */
