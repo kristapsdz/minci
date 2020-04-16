@@ -387,7 +387,6 @@ do
 
 	if [ $TIME_start -eq 0 ]
 	then
-		msg "ignoring: $reponame"
 		[ -n "$NOOP" ] || rm -f /tmp/minci.log
 		continue
 	fi
