@@ -43,7 +43,9 @@ run()
 	if [ -z "$NOOP" ]
 	then
 		echo "$PROGNAME: $1: $2" 1>&3
-		eval "$1" 1>&3 2>&3 || return 1
+		set +e ; 
+		eval "$1" 1>&3 2>&3 || { set -e ; return 1; }
+		set -e ;
 	fi
 	return 0
 }
