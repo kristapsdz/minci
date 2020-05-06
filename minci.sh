@@ -1,7 +1,11 @@
 #! /bin/sh
 
 # Usage:
-# minci.sh [-fnv] [repo...]
+# minci.sh [-fnrv] [repo...]
+#  -f: force updates
+#  -n: don't do anything, but show what would be done
+#  -r: run full check, but don't upload results
+#  -v: more data while running
 # Use ~/.minci or /etc/minci for configuration, whichever comes first.
 
 MAKE="make"
@@ -61,7 +65,7 @@ runnolog()
 	fi
 }
 
-args=$(getopt fnv $*)
+args=$(getopt fnrv $*)
 if [ $? -ne 0 ]
 then
 	echo "usage: $PROGNAME [-fnrv] [repo ...]" 1>&2
