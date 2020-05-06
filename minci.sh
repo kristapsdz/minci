@@ -9,6 +9,7 @@ API_SECRET=
 DEP_BINS="mandoc openssl git curl"
 # TODO: make sqlite3 be per-system.
 NOOP=
+NOREP=
 VERBOSE=
 MINCI_REPO="https://github.com/kristapsdz/minci"
 AUTOUP=1
@@ -63,7 +64,7 @@ runnolog()
 args=$(getopt fnv $*)
 if [ $? -ne 0 ]
 then
-	echo "usage: $PROGNAME [-fnv] [repo ...]" 1>&2
+	echo "usage: $PROGNAME [-fnrv] [repo ...]" 1>&2
 	exit 1
 fi
 
@@ -75,6 +76,8 @@ do
 	in
 		-n)
 			NOOP=1 ; shift ;;
+		-r)
+			NOREP=1 ; shift ;;
 		-f)
 			FORCE=1 ; shift ;;
 		-v)
@@ -459,7 +462,7 @@ do
 		REPORT_LOG="-F report-log="
 	fi
 
-	if [ -z "$NOOP" ]
+	if [ -z "$NOOP" -a -z "$NOREP" ]
 	then
 		curl -sS ${REPORT_LOG} \
 		     -F "project-name=${reponame}" \
@@ -479,6 +482,9 @@ do
 		     -F "user-apikey=${API_KEY}" \
 		     -F "signature=${SIGNATURE}" \
 		     "${SERVER}"
+	fi
+	if [ -z "$NOOP" ]
+	then
 		rm -f /tmp/minci.log
 	fi
 done < "$CONFIG"
