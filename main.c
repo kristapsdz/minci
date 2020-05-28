@@ -248,20 +248,17 @@ get_html_last_report(const struct report *p, void *arg)
 	date = kutil_date2epoch
 		(tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
 
-	urlid = kutil_urlpartx(NULL,
-		r->r->pname, 
+	urlid = khttp_urlpartx(r->r->pname, 
 		ksuffixes[KMIME_TEXT_HTML],
 		pages[PAGE_INDEX],
 		valid_keys[VALID_REPORT_ID].name,
 		KATTRX_INT, p->id, NULL);
-	urlproj = kutil_urlpartx(NULL,
-		r->r->pname, 
+	urlproj = khttp_urlpartx(r->r->pname, 
 		ksuffixes[KMIME_TEXT_HTML],
 		pages[PAGE_INDEX],
 		valid_keys[VALID_PROJECT_NAME].name,
 		KATTRX_STRING, p->project.name, NULL);
-	urldate = kutil_urlpartx(NULL,
-		r->r->pname, 
+	urldate = khttp_urlpartx(r->r->pname, 
 		ksuffixes[KMIME_TEXT_HTML],
 		pages[PAGE_INDEX],
 		valid_keys[VALID_REPORT_CTIME].name,
@@ -269,8 +266,7 @@ get_html_last_report(const struct report *p, void *arg)
 	kasprintf(&urlcommit, "%s/%s/tree/%s",
 		COMMIT_BASE, p->project.name,
 		p->fetchhead);
-	urluname = kutil_urlpart(NULL,
-		r->r->pname,
+	urluname = khttp_urlpart(r->r->pname,
 		ksuffixes[KMIME_TEXT_HTML],
 		pages[PAGE_INDEX],
 		valid_keys[VALID_REPORT_UNAMEHASH].name,
@@ -401,8 +397,7 @@ get_single_html(struct kreq *r, const struct report *p)
 	const char	*cp;
 	size_t		 count;
 
-	urlproj = kutil_urlpartx(NULL,
-		r->pname, 
+	urlproj = khttp_urlpartx(r->pname, 
 		ksuffixes[KMIME_TEXT_HTML],
 		pages[PAGE_INDEX],
 		valid_keys[VALID_PROJECT_NAME].name,
@@ -410,8 +405,7 @@ get_single_html(struct kreq *r, const struct report *p)
 	kasprintf(&urlcommit, "%s/%s/tree/%s",
 		COMMIT_BASE, p->project.name,
 		p->fetchhead);
-	urluname = kutil_urlpart(NULL,
-		r->pname,
+	urluname = khttp_urlpart(r->pname,
 		ksuffixes[KMIME_TEXT_HTML],
 		pages[PAGE_INDEX],
 		valid_keys[VALID_REPORT_UNAMEHASH].name,
@@ -545,8 +539,7 @@ get_single_html(struct kreq *r, const struct report *p)
 		}
 		khtml_puts(&req, cp);
 		khtml_closeelem(&req, 1); /* div */
-		url = kutil_urlpartx(NULL,
-			r->pname, 
+		url = khttp_urlpartx(r->pname, 
 			ksuffixes[KMIME_TEXT_PLAIN],
 			pages[PAGE_INDEX],
 			valid_keys[VALID_REPORT_ID].name,
@@ -724,8 +717,7 @@ get_dash(struct kreq *r, time_t mtime)
 	/* Now each project's data. */
 
 	for (i = 0; i < dashsz; i++) {
-		urlproj = kutil_urlpartx(NULL,
-			r->pname, 
+		urlproj = khttp_urlpartx(r->pname, 
 			ksuffixes[KMIME_TEXT_HTML],
 			pages[PAGE_INDEX],
 			valid_keys[VALID_PROJECT_NAME].name,
